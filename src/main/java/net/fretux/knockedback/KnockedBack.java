@@ -1,0 +1,71 @@
+package net.fretux.knockedback;
+
+import com.mojang.logging.LogUtils;
+import net.fretux.knockedback.effects.KnockedEffect;
+import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.event.server.ServerStartingEvent;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import org.slf4j.Logger;
+import net.minecraft.world.damagesource.DamageSource;
+
+@Mod(KnockedBack.MOD_ID)
+public class KnockedBack {
+    public static final String MOD_ID = "knockedback";
+    private static final Logger LOGGER = LogUtils.getLogger();
+
+    public KnockedBack() {
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
+        MinecraftForge.EVENT_BUS.register(this);
+        MinecraftForge.EVENT_BUS.register(new KnockedEffect());
+        MinecraftForge.EVENT_BUS.register(new MobKillHandler());
+        MinecraftForge.EVENT_BUS.register(new PlayerExecutionHandler());
+    }
+
+    private void setup(final FMLCommonSetupEvent event) {
+        NetworkHandler.register();
+        PlayerExecutionHandler.register();
+    }
+
+    @SubscribeEvent
+    public void onServerStarting(ServerStartingEvent event) {
+        LOGGER.info("KnockedBack mod server starting");
+    }
+
+    @SubscribeEvent
+    public void onLivingHurt(LivingHurtEvent event) {
+        DamageSource source = event.getSource();
+        String damageType = source.getMsgId();
+        if (event.getEntity() instanceof Player player && player.getHealth() - event.getAmount() <= 0) {
+            if (!(damageType.equals("fall") || damageType.equals("explosion") || damageType.equals("explosion.player") ||
+                    damageType.equals("fire") || damageType.equals("lava") || damageType.equals("onFire") ||
+                    damageType.equals("fireball"))) {
+                event.setCanceled(true);
+                KnockedManager.applyKnockedState(player);
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public void onLivingDeath(LivingDeathEvent event) {
+        if (KnockedManager.isKnocked(event.getEntity())) {
+            event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent
+    public void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase == TickEvent.Phase.END && event.side.isServer()) {
+            KnockedManager.tickKnockedStates();
+        }
+    }
+}
