@@ -1,14 +1,14 @@
 package net.fretux.knockedback.client;
 
 import net.fretux.knockedback.KnockedBack;
+import net.fretux.knockedback.client.ClientKnockedState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = KnockedBack.MOD_ID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = KnockedBack.MOD_ID, value = net.minecraftforge.api.distmarker.Dist.CLIENT)
 public class KnockedTimeOverlay {
 
     @SubscribeEvent
@@ -23,7 +23,6 @@ public class KnockedTimeOverlay {
         int x = screenWidth / 2 - mc.font.width(text) / 2;
         int y = 10; // 10 pixels from the top
 
-        // Draw the text with a drop shadow (true = drop shadow)
         guiGraphics.drawString(mc.font, text, x, y, 0xFFFFFF, true);
     }
 }

@@ -3,8 +3,6 @@ package net.fretux.knockedback;
 import net.fretux.knockedback.client.ClientKnockedState;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
-import net.fretux.knockedback.KnockedBack;
 import java.util.function.Supplier;
 
 public class KnockedTimePacket {

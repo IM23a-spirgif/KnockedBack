@@ -22,5 +22,10 @@ public class NetworkHandler {
                 ExecuteKnockedPacket::encode,
                 ExecuteKnockedPacket::decode,
                 ExecuteKnockedPacket::handle);
+        CHANNEL.registerMessage(id++,
+                KnockedTimePacket.class,
+                KnockedTimePacket::encode,
+                KnockedTimePacket::decode,
+                KnockedTimePacket::handle);
     }
 }

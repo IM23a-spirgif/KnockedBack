@@ -11,7 +11,7 @@ import net.minecraftforge.network.PacketDistributor;
 
 import java.util.*;
 
-@Mod.EventBusSubscriber
+@Mod.EventBusSubscriber(modid = KnockedBack.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class KnockedManager {
     private static final Map<UUID, Integer> knockedEntities = new HashMap<>();
     private static final Set<UUID> grippedEntities = new HashSet<>();
@@ -56,8 +56,13 @@ public class KnockedManager {
             Map.Entry<UUID, Integer> entry = it.next();
             UUID entityId = entry.getKey();
             int timeLeft = entry.getValue();
-            // If the player is not gripped, update the countdown
-            if (!grippedEntities.contains(entityId)) {
+
+            // If the player is gripped, force the timer to 0
+            if (grippedEntities.contains(entityId)) {
+                entry.setValue(0);
+                timeLeft = 0;
+            } else {
+                // If not gripped, decrease normally
                 timeLeft--;
                 if (timeLeft <= 0) {
                     it.remove();
@@ -66,23 +71,21 @@ public class KnockedManager {
                     entry.setValue(timeLeft);
                 }
             }
+
             // Send the updated time to the knocked player
             ServerPlayer knockedPlayer = NetworkHandlerHelper.getPlayerByUuid(
                     net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer(), entityId);
             if (knockedPlayer != null) {
                 NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> knockedPlayer),
-                        new net.fretux.knockedback.KnockedTimePacket(timeLeft));
+                        new KnockedTimePacket(timeLeft));
             }
         }
     }
-
 
     @SubscribeEvent
     public static void onLivingHurt(LivingHurtEvent event) {
         LivingEntity entity = event.getEntity();
         if (!isKnocked(entity)) return;
-
-        // Always reset the timer regardless of other conditions
         knockedEntities.put(entity.getUUID(), KNOCKED_DURATION);
 
         DamageSource source = event.getSource();
@@ -100,11 +103,9 @@ public class KnockedManager {
         if ((damageType.equals("fall") || damageType.equals("explosion") || damageType.equals("explosion.player")) &&
                 event.getAmount() >= entity.getHealth()) {
             entity.setHealth(0.0F);
-            removeKnockedState(entity);
+            removeKnockedState(entity); 
             return;
         }
-
-        // Still cancel damage for non-lethal hits, but **reset timer**
         event.setCanceled(true);
     }
 }

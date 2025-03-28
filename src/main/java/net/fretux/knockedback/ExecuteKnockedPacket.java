@@ -32,7 +32,9 @@ public class ExecuteKnockedPacket {
     private static LivingEntity findNearestKnockedEntity(ServerPlayer executor) {
         return KnockedManager.getKnockedUuids().stream()
                 .map(uuid -> NetworkHandlerHelper.getPlayerByUuid(executor.getServer(), uuid))
-                .filter(player -> player != null && player.distanceTo(executor) <= (float) PlayerExecutionHandler.EXECUTION_RANGE)
+                .filter(player -> player != null
+                        && !player.getUUID().equals(executor.getUUID())
+                        && player.distanceTo(executor) <= (float) PlayerExecutionHandler.EXECUTION_RANGE)
                 .findFirst()
                 .orElse(null);
     }
