@@ -11,7 +11,6 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 @Mod.EventBusSubscriber(modid = "knockedback", bus = Mod.EventBusSubscriber.Bus.MOD)
 public class PlayerExecutionHandler {
     public static final double EXECUTION_RANGE = 2.0;
-
     public static void register() {
         MinecraftForge.EVENT_BUS.register(new PlayerExecutionHandler());
     }

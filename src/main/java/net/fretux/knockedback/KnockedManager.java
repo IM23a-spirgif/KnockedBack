@@ -56,13 +56,10 @@ public class KnockedManager {
             Map.Entry<UUID, Integer> entry = it.next();
             UUID entityId = entry.getKey();
             int timeLeft = entry.getValue();
-
-            // If the player is gripped, force the timer to 0
             if (grippedEntities.contains(entityId)) {
                 entry.setValue(0);
                 timeLeft = 0;
             } else {
-                // If not gripped, decrease normally
                 timeLeft--;
                 if (timeLeft <= 0) {
                     it.remove();
@@ -71,8 +68,6 @@ public class KnockedManager {
                     entry.setValue(timeLeft);
                 }
             }
-
-            // Send the updated time to the knocked player
             ServerPlayer knockedPlayer = NetworkHandlerHelper.getPlayerByUuid(
                     net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer(), entityId);
             if (knockedPlayer != null) {
@@ -85,13 +80,23 @@ public class KnockedManager {
     @SubscribeEvent
     public static void onLivingHurt(LivingHurtEvent event) {
         LivingEntity entity = event.getEntity();
-        if (!isKnocked(entity)) return;
-        knockedEntities.put(entity.getUUID(), KNOCKED_DURATION);
-
         DamageSource source = event.getSource();
         String damageType = source.getMsgId();
 
-        // Handle lethal damage cases (fire, explosions, etc.)
+        boolean isFatal = entity.getHealth() - event.getAmount() <= 0;
+
+        if (!isKnocked(entity)) {
+            if (entity instanceof Player player && isFatal) {
+                if (!(damageType.equals("fall") || damageType.equals("explosion") || damageType.equals("explosion.player") ||
+                        damageType.equals("fire") || damageType.equals("lava") || damageType.equals("onFire") ||
+                        damageType.equals("fireball"))) {
+                    event.setCanceled(true);
+                    applyKnockedState(player);
+                }
+            }
+            return;
+        }
+        knockedEntities.put(entity.getUUID(), KNOCKED_DURATION);
         if (damageType.equals("fire") || damageType.equals("lava") || damageType.equals("onFire") ||
                 damageType.equals("explosion") || damageType.equals("explosion.player") || damageType.equals("fireball")) {
             entity.setHealth(0.0F);
@@ -99,13 +104,13 @@ public class KnockedManager {
             return;
         }
 
-        // Handle falling or lethal explosion
         if ((damageType.equals("fall") || damageType.equals("explosion") || damageType.equals("explosion.player")) &&
                 event.getAmount() >= entity.getHealth()) {
             entity.setHealth(0.0F);
-            removeKnockedState(entity); 
+            removeKnockedState(entity);
             return;
         }
+
         event.setCanceled(true);
     }
 }

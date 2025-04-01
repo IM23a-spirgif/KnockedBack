@@ -42,20 +42,6 @@ public class KnockedBack {
     }
 
     @SubscribeEvent
-    public void onLivingHurt(LivingHurtEvent event) {
-        DamageSource source = event.getSource();
-        String damageType = source.getMsgId();
-        if (event.getEntity() instanceof Player player && player.getHealth() - event.getAmount() <= 0) {
-            if (!(damageType.equals("fall") || damageType.equals("explosion") || damageType.equals("explosion.player") ||
-                    damageType.equals("fire") || damageType.equals("lava") || damageType.equals("onFire") ||
-                    damageType.equals("fireball"))) {
-                event.setCanceled(true);
-                KnockedManager.applyKnockedState(player);
-            }
-        }
-    }
-
-    @SubscribeEvent
     public void onLivingDeath(LivingDeathEvent event) {
         if (KnockedManager.isKnocked(event.getEntity())) {
             event.setCanceled(true);

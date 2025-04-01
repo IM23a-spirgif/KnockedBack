@@ -19,6 +19,7 @@ public class KnockedEffect {
             player.setDeltaMovement(0, 0, 0);
             player.setSprinting(false);
             player.hurtMarked = true;
+            player.setNoGravity(false);
         }
     }
 
