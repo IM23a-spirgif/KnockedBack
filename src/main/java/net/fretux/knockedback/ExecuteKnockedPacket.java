@@ -3,6 +3,7 @@ package net.fretux.knockedback;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
@@ -23,7 +24,9 @@ public class ExecuteKnockedPacket {
             if (executor == null) return;
             LivingEntity target = findNearestKnockedEntity(executor);
             if (target != null) {
-                PlayerExecutionHandler.executeKnockedPlayer(executor, target);
+                if (target instanceof Player targetPlayer) {
+                    PlayerExecutionHandler.startExecution(executor, targetPlayer);
+                }
             }
         });
         ctx.get().setPacketHandled(true);

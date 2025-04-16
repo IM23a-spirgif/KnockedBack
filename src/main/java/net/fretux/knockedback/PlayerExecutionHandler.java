@@ -1,23 +1,83 @@
 package net.fretux.knockedback;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
-@Mod.EventBusSubscriber(modid = "knockedback", bus = Mod.EventBusSubscriber.Bus.MOD)
+import static net.fretux.knockedback.NetworkHandlerHelper.getPlayerByUuid;
+
+@Mod.EventBusSubscriber(modid = "knockedback", bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class PlayerExecutionHandler {
     public static final double EXECUTION_RANGE = 2.0;
+    private static final int EXECUTION_DELAY_TICKS = 60;
+
+    private static final Map<UUID, PlayerExecutionAttempt> executionAttempts = new HashMap<>();
+
+    private static class PlayerExecutionAttempt {
+        private final UUID executorUuid;
+        private int timeLeft;
+
+        public PlayerExecutionAttempt(UUID executorUuid) {
+            this.executorUuid = executorUuid;
+            this.timeLeft = EXECUTION_DELAY_TICKS;
+        }
+    }
+
+
     public static void register() {
         MinecraftForge.EVENT_BUS.register(new PlayerExecutionHandler());
     }
 
+    public static void startExecution(ServerPlayer executor, Player target) {
+        UUID knockedId = target.getUUID();
+        if (!KnockedManager.isKnocked(target)) return;
+        if (executionAttempts.containsKey(knockedId)) return;
+
+        executionAttempts.put(knockedId, new PlayerExecutionAttempt(executor.getUUID()));
+        executor.sendSystemMessage(Component.literal("Execution started..."));
+        target.sendSystemMessage(Component.literal("You're being executed!"));
+    }
+
+    public static void cancelExecution(UUID knockedId) {
+        PlayerExecutionAttempt attempt = executionAttempts.remove(knockedId);
+        if (attempt != null) {
+            ServerPlayer knocked = getPlayerByUuid(knockedId);
+            if (knocked != null) {
+                knocked.sendSystemMessage(Component.literal("Execution interrupted!"));
+            }
+
+            ServerPlayer executor = getPlayerByUuid(attempt.executorUuid);
+            if (executor != null) {
+                executor.sendSystemMessage(Component.literal("Your execution was interrupted!"));
+            }
+        }
+    }
+
     @SubscribeEvent
-    public static void onCommonSetup(FMLCommonSetupEvent event) {
-        register();
+    public static void onLivingHurt(LivingHurtEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer hurtPlayer)) return;
+
+        UUID hurtId = hurtPlayer.getUUID();
+        boolean wasExecutor = executionAttempts.values().removeIf(attempt -> attempt.executorUuid.equals(hurtId));
+        if (wasExecutor) {
+            hurtPlayer.sendSystemMessage(Component.literal("Execution canceled because you were hit!"));
+        }
+    }
+
+    private static ServerPlayer getPlayerByUuid(UUID uuid) {
+        MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+        return server.getPlayerList().getPlayer(uuid);
     }
 
     public static void executeKnockedPlayer(ServerPlayer executor, LivingEntity knockedPlayer) {
@@ -27,5 +87,41 @@ public class PlayerExecutionHandler {
         if (knockedPlayer instanceof ServerPlayer serverPlayer) {
             serverPlayer.sendSystemMessage(Component.literal("You were executed by " + executor.getName().getString() + "!"));
         }
+    }
+
+    @SubscribeEvent
+    public static void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END || !event.side.isServer()) return;
+
+        Map<UUID, PlayerExecutionAttempt> updated = new HashMap<>();
+
+        for (Map.Entry<UUID, PlayerExecutionAttempt> entry : executionAttempts.entrySet()) {
+            UUID knockedId = entry.getKey();
+            PlayerExecutionAttempt attempt = entry.getValue();
+
+            ServerPlayer knocked = getPlayerByUuid(knockedId);
+            ServerPlayer executor = getPlayerByUuid(attempt.executorUuid);
+
+            if (knocked == null || executor == null || !KnockedManager.isKnocked(knocked)) {
+                continue; // Invalid players or no longer knocked
+            }
+
+            // If out of range, cancel the execution
+            if (executor.distanceTo(knocked) > EXECUTION_RANGE) {
+                cancelExecution(knockedId);
+                continue;
+            }
+
+            attempt.timeLeft--;
+
+            if (attempt.timeLeft <= 0) {
+                executeKnockedPlayer(executor, knocked);
+            } else {
+                updated.put(knockedId, attempt);
+            }
+        }
+
+        executionAttempts.clear();
+        executionAttempts.putAll(updated);
     }
 }
