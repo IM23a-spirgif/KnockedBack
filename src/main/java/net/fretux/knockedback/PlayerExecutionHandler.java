@@ -8,6 +8,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -21,6 +22,33 @@ import static net.fretux.knockedback.NetworkHandlerHelper.getPlayerByUuid;
 public class PlayerExecutionHandler {
     public static final double EXECUTION_RANGE = 2.0;
     private static final int EXECUTION_DELAY_TICKS = 60;
+
+    public static boolean isBeingPlayerExecuted(UUID knockedId) {
+        return executionAttempts.containsKey(knockedId);
+    }
+
+    public static boolean isExecuting(UUID playerUuid) {
+        return executionAttempts.values()
+                .stream()
+                .anyMatch(attempt -> attempt.executorUuid.equals(playerUuid));
+    }
+    @SubscribeEvent
+    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        if (event.side.isServer()
+                && event.phase == TickEvent.Phase.END
+                && event.player instanceof ServerPlayer sp
+                && isExecuting(sp.getUUID())) {
+            sp.setDeltaMovement(0, 0, 0);
+            sp.setSprinting(false);
+        }
+    }
+    @SubscribeEvent
+    public static void onAttackEntity(AttackEntityEvent event) {
+        if (event.getEntity() instanceof ServerPlayer sp
+                && isExecuting(sp.getUUID())) {
+            event.setCanceled(true);
+        }
+    }
 
     private static final Map<UUID, PlayerExecutionAttempt> executionAttempts = new HashMap<>();
 

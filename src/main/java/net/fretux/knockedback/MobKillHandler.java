@@ -24,6 +24,10 @@ import static net.fretux.knockedback.KnockedManager.setGripped;
  */
 public class MobKillHandler {
     private static final int EXECUTION_DELAY_TICKS = 3 * 20;
+
+    public static boolean isBeingMobExecuted(UUID knockedId) {
+        return killAttempts.containsKey(knockedId);
+    }
     /**
      * A record of ongoing kill attempts.
      * Key = Knocked player's UUID

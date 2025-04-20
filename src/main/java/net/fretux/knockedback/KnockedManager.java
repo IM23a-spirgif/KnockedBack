@@ -36,7 +36,14 @@ public class KnockedManager {
         knockedEntities.remove(entity.getUUID());
         grippedEntities.remove(entity.getUUID());
         MobKillHandler.clearKillAttempt(entity.getUUID());
+        if (entity instanceof ServerPlayer sp) {
+            NetworkHandler.CHANNEL.send(
+                    PacketDistributor.PLAYER.with(() -> sp),
+                    new KnockedTimePacket(0)
+            );
+        }
     }
+
 
     public static void setGripped(LivingEntity entity, boolean isGripped) {
         if (isGripped) {
@@ -51,28 +58,51 @@ public class KnockedManager {
     }
 
     public static void tickKnockedStates() {
+        var server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
         Iterator<Map.Entry<UUID, Integer>> it = knockedEntities.entrySet().iterator();
+
         while (it.hasNext()) {
             Map.Entry<UUID, Integer> entry = it.next();
-            UUID entityId = entry.getKey();
+            UUID playerId = entry.getKey();
             int timeLeft = entry.getValue();
-            if (grippedEntities.contains(entityId)) {
-                entry.setValue(0);
-                timeLeft = 0;
-            } else {
-                timeLeft--;
-                if (timeLeft <= 0) {
-                    it.remove();
-                    continue;
-                } else {
-                    entry.setValue(timeLeft);
+
+            // ① If a mob *or* a player is in the middle of executing them, pause:
+            if (MobKillHandler.isBeingMobExecuted(playerId)
+                    || PlayerExecutionHandler.isBeingPlayerExecuted(playerId)) {
+
+                // just re‑send the *current* timeLeft, do NOT decrement
+                ServerPlayer p = NetworkHandlerHelper.getPlayerByUuid(server, playerId);
+                if (p != null) {
+                    NetworkHandler.CHANNEL.send(
+                            PacketDistributor.PLAYER.with(() -> p),
+                            new KnockedTimePacket(timeLeft)
+                    );
                 }
+                continue;
             }
-            ServerPlayer knockedPlayer = NetworkHandlerHelper.getPlayerByUuid(
-                    net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer(), entityId);
-            if (knockedPlayer != null) {
-                NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> knockedPlayer),
-                        new KnockedTimePacket(timeLeft));
+
+            // ② Otherwise count down as normal:
+            timeLeft--;
+            if (timeLeft <= 0) {
+                // send final zero
+                ServerPlayer p = NetworkHandlerHelper.getPlayerByUuid(server, playerId);
+                if (p != null) {
+                    NetworkHandler.CHANNEL.send(
+                            PacketDistributor.PLAYER.with(() -> p),
+                            new KnockedTimePacket(0)
+                    );
+                }
+                it.remove();
+            } else {
+                // update and send
+                entry.setValue(timeLeft);
+                ServerPlayer p = NetworkHandlerHelper.getPlayerByUuid(server, playerId);
+                if (p != null) {
+                    NetworkHandler.CHANNEL.send(
+                            PacketDistributor.PLAYER.with(() -> p),
+                            new KnockedTimePacket(timeLeft)
+                    );
+                }
             }
         }
     }
@@ -82,9 +112,7 @@ public class KnockedManager {
         LivingEntity entity = event.getEntity();
         DamageSource source = event.getSource();
         String damageType = source.getMsgId();
-
         boolean isFatal = entity.getHealth() - event.getAmount() <= 0;
-
         if (!isKnocked(entity)) {
             if (entity instanceof Player player && isFatal) {
                 if (!(damageType.equals("fall") || damageType.equals("explosion") || damageType.equals("explosion.player") ||
@@ -103,14 +131,12 @@ public class KnockedManager {
             removeKnockedState(entity);
             return;
         }
-
         if ((damageType.equals("fall") || damageType.equals("explosion") || damageType.equals("explosion.player")) &&
                 event.getAmount() >= entity.getHealth()) {
             entity.setHealth(0.0F);
             removeKnockedState(entity);
             return;
         }
-
         event.setCanceled(true);
     }
 }
