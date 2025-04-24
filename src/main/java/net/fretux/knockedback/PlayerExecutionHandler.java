@@ -12,6 +12,8 @@ import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.network.PacketDistributor;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -21,31 +23,27 @@ import static net.fretux.knockedback.NetworkHandlerHelper.getPlayerByUuid;
 @Mod.EventBusSubscriber(modid = "knockedback", bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class PlayerExecutionHandler {
     public static final double EXECUTION_RANGE = 2.0;
-    private static final int EXECUTION_DELAY_TICKS = 60;
+    public static final int EXECUTION_DELAY_TICKS = 60;
 
     public static boolean isBeingPlayerExecuted(UUID knockedId) {
         return executionAttempts.containsKey(knockedId);
     }
 
     public static boolean isExecuting(UUID playerUuid) {
-        return executionAttempts.values()
-                .stream()
-                .anyMatch(attempt -> attempt.executorUuid.equals(playerUuid));
+        return executionAttempts.values().stream().anyMatch(attempt -> attempt.executorUuid.equals(playerUuid));
     }
+
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.side.isServer()
-                && event.phase == TickEvent.Phase.END
-                && event.player instanceof ServerPlayer sp
-                && isExecuting(sp.getUUID())) {
+        if (event.side.isServer() && event.phase == TickEvent.Phase.END && event.player instanceof ServerPlayer sp && isExecuting(sp.getUUID())) {
             sp.setDeltaMovement(0, 0, 0);
             sp.setSprinting(false);
         }
     }
+
     @SubscribeEvent
     public static void onAttackEntity(AttackEntityEvent event) {
-        if (event.getEntity() instanceof ServerPlayer sp
-                && isExecuting(sp.getUUID())) {
+        if (event.getEntity() instanceof ServerPlayer sp && isExecuting(sp.getUUID())) {
             event.setCanceled(true);
         }
     }
@@ -141,6 +139,8 @@ public class PlayerExecutionHandler {
             }
 
             attempt.timeLeft--;
+
+            NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> executor), new ExecutionProgressPacket(attempt.timeLeft));
 
             if (attempt.timeLeft <= 0) {
                 executeKnockedPlayer(executor, knocked);
