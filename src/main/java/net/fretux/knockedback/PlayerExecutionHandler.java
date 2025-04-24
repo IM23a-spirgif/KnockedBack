@@ -141,6 +141,7 @@ public class PlayerExecutionHandler {
             attempt.timeLeft--;
 
             NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> executor), new ExecutionProgressPacket(attempt.timeLeft));
+            NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> knocked), new ExecutionProgressPacket(attempt.timeLeft));
 
             if (attempt.timeLeft <= 0) {
                 executeKnockedPlayer(executor, knocked);
