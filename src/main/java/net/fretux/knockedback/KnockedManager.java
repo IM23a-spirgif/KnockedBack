@@ -65,12 +65,8 @@ public class KnockedManager {
             Map.Entry<UUID, Integer> entry = it.next();
             UUID playerId = entry.getKey();
             int timeLeft = entry.getValue();
-
-            // ① If a mob *or* a player is in the middle of executing them, pause:
             if (MobKillHandler.isBeingMobExecuted(playerId)
                     || PlayerExecutionHandler.isBeingPlayerExecuted(playerId)) {
-
-                // just re‑send the *current* timeLeft, do NOT decrement
                 ServerPlayer p = NetworkHandlerHelper.getPlayerByUuid(server, playerId);
                 if (p != null) {
                     NetworkHandler.CHANNEL.send(
@@ -80,7 +76,6 @@ public class KnockedManager {
                 }
                 continue;
             }
-
             // ② Otherwise count down as normal:
             timeLeft--;
             if (timeLeft <= 0) {

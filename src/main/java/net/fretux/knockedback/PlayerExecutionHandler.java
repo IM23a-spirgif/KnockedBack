@@ -50,6 +50,7 @@ public class PlayerExecutionHandler {
     private static class PlayerExecutionAttempt {
         private final UUID executorUuid;
         private int timeLeft;
+
         public PlayerExecutionAttempt(UUID executorUuid) {
             this.executorUuid = executorUuid;
             this.timeLeft = EXECUTION_DELAY_TICKS;
@@ -64,6 +65,10 @@ public class PlayerExecutionHandler {
     public static void startExecution(ServerPlayer executor, Player target) {
         UUID knockedId = target.getUUID();
         if (!KnockedManager.isKnocked(target)) return;
+        if (CarryManager.isBeingCarried(target.getUUID())) {
+            executor.sendSystemMessage(Component.literal("Cannot execute someone you're carrying!"));
+            return;
+        }
         if (executionAttempts.containsKey(knockedId)) return;
         executionAttempts.put(knockedId, new PlayerExecutionAttempt(executor.getUUID()));
         executor.sendSystemMessage(Component.literal("Execution started..."));

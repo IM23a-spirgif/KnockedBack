@@ -1,5 +1,6 @@
 package net.fretux.knockedback.client;
 
+import net.fretux.knockedback.CarryTogglePacket;
 import net.fretux.knockedback.ExecuteKnockedPacket;
 import net.fretux.knockedback.NetworkHandler;
 import net.minecraft.client.KeyMapping;
@@ -29,6 +30,17 @@ public class ClientKeyHandler {
         }
     }
 
+    public static final KeyMapping CARRY_KEY = new KeyMapping(
+            "key.knockedback.carry",
+            GLFW.GLFW_KEY_V,
+            "key.categories.knockedback"
+    );
+
+    @SubscribeEvent
+    public static void registerCarryKey(RegisterKeyMappingsEvent e) {
+        e.register(CARRY_KEY);
+    }
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (Minecraft.getInstance().screen != null) return;
@@ -39,6 +51,12 @@ public class ClientKeyHandler {
                 );
                 // Send the packet to the server
                 NetworkHandler.CHANNEL.sendToServer(new ExecuteKnockedPacket());
+            }
+        }
+        if (event.phase == TickEvent.Phase.END && CARRY_KEY.consumeClick()) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null && mc.screen == null) {
+                NetworkHandler.CHANNEL.sendToServer(new CarryTogglePacket());
             }
         }
     }
