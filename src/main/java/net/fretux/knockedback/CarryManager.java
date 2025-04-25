@@ -1,15 +1,15 @@
 package net.fretux.knockedback;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.EntityMountEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.event.entity.EntityMountEvent;
-import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket;
 
 import java.util.*;
 
@@ -19,55 +19,63 @@ public class CarryManager {
     private static final double CARRY_RANGE = 2.0;
 
     public static void toggleCarry(ServerPlayer carrier) {
-        Optional<Player> existing = carrier.getPassengers().stream()
+        // 1) If they’re already carrying someone, drop them—and quit immediately
+        carrier.getPassengers().stream()
                 .filter(p -> p instanceof Player)
                 .map(p -> (Player)p)
-                .findFirst();
-        if (existing.isPresent()) {
-            stopCarry(existing.get(), carrier);
-            return;
-        }
-        Player near = findNearestKnocked(carrier);
+                .findFirst()
+                .ifPresent(p -> {
+                    stopCarry((Player)p, carrier);
+                });
+        if (carrier.getPassengers().size() > 0) return;
+
+        // 2) Otherwise look for a knocked player to pick up
+        ServerPlayer near = findNearestKnocked(carrier);
         if (near != null) {
             startCarry(carrier, near);
         }
     }
 
-
-    private static Player findNearestKnocked(ServerPlayer carrier) {
+    private static ServerPlayer findNearestKnocked(ServerPlayer carrier) {
         AABB box = carrier.getBoundingBox().inflate(CARRY_RANGE);
-        return carrier
-                .getCommandSenderWorld()
-                .getEntitiesOfClass(Player.class, box).stream()
+        return carrier.getCommandSenderWorld()
+                .getEntitiesOfClass(ServerPlayer.class, box).stream()
                 .filter(p -> KnockedManager.isKnocked(p)
                         && !p.getUUID().equals(carrier.getUUID()))
                 .findFirst()
                 .orElse(null);
     }
 
-
-    private static void startCarry(ServerPlayer carrier, Player knocked) {
-        // mount
+    private static void startCarry(ServerPlayer carrier, ServerPlayer knocked) {
+        // mount once
         knocked.startRiding(carrier, true);
         carrying.put(knocked.getUUID(), carrier.getUUID());
+
+        // tell both clients
+        ClientboundSetPassengersPacket pkt = new ClientboundSetPassengersPacket(carrier);
+        carrier.connection.send(pkt);
+        knocked.connection.send(pkt);
+
         carrier.sendSystemMessage(Component.literal("Picked up " + knocked.getName().getString()));
         knocked.sendSystemMessage(Component.literal("You are being carried by " + carrier.getName().getString()));
-        knocked.startRiding(carrier, true);
-        carrying.put(knocked.getUUID(), carrier.getUUID());
-        carrier.connection.send(new ClientboundSetPassengersPacket(carrier));
     }
 
     private static void stopCarry(Player knocked, ServerPlayer carrier) {
         knocked.stopRiding();
         carrying.remove(knocked.getUUID());
-        carrier.connection.send(new ClientboundSetPassengersPacket(carrier));
+
+        // same packet to both sides
+        ClientboundSetPassengersPacket pkt = new ClientboundSetPassengersPacket(carrier);
+        carrier.connection.send(pkt);
+        if (knocked instanceof ServerPlayer sp) {
+            sp.connection.send(pkt);
+        }
+
         carrier.sendSystemMessage(Component.literal("Dropped " + knocked.getName().getString()));
         knocked.sendSystemMessage(Component.literal("You have been dropped"));
     }
 
-    /**
-     * Called each server tick to drop if carrier hurt or out of range
-     */
+    /** 2) auto-drop if out of range or no longer knocked */
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent ev) {
         if (ev.phase != TickEvent.Phase.END || !ev.side.isServer()) return;
@@ -75,40 +83,37 @@ public class CarryManager {
 
         List<UUID> toDrop = new ArrayList<>();
         for (var entry : carrying.entrySet()) {
-            UUID knockedId = entry.getKey();
-            UUID carrierId = entry.getValue();
-            ServerPlayer carrier = NetworkHandlerHelper.getPlayerByUuid(server, carrierId);
-            ServerPlayer knocked = NetworkHandlerHelper.getPlayerByUuid(server, knockedId);
-
+            UUID k = entry.getKey();
+            UUID c = entry.getValue();
+            ServerPlayer carrier = NetworkHandlerHelper.getPlayerByUuid(server, c);
+            ServerPlayer knocked  = NetworkHandlerHelper.getPlayerByUuid(server, k);
             if (carrier == null || knocked == null
                     || !KnockedManager.isKnocked(knocked)
                     || carrier.distanceTo(knocked) > CARRY_RANGE) {
-                toDrop.add(knockedId);
+                toDrop.add(k);
             }
         }
-        for (UUID kid : toDrop) {
-            UUID cid = carrying.get(kid);
+        toDrop.forEach(k -> {
             ServerPlayer carrier = NetworkHandlerHelper.getPlayerByUuid(
-                    net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer(), cid);
+                    net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer(),
+                    carrying.get(k));
             ServerPlayer knocked = NetworkHandlerHelper.getPlayerByUuid(
-                    net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer(), kid);
+                    net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer(), k);
             if (carrier != null && knocked != null) stopCarry(knocked, carrier);
-        }
+        });
     }
 
+    /** 2b) prevent sneak-dismount */
     @SubscribeEvent
     public static void onEntityMount(EntityMountEvent evt) {
-        if (!evt.isMounting()) {
-            if (evt.getEntityMounting() instanceof Player knocked
-                    && carrying.containsKey(knocked.getUUID())) {
-                evt.setCanceled(true);
-            }
+        if (!evt.isMounting()
+                && evt.getEntityMounting() instanceof Player knocked
+                && carrying.containsKey(knocked.getUUID())) {
+            evt.setCanceled(true);
         }
     }
 
-    /**
-     * Drop if carrier is hurt
-     */
+    /** 3) auto-drop if carrier is hurt */
     @SubscribeEvent
     public static void onCarrierHurt(LivingHurtEvent ev) {
         if (!(ev.getEntity() instanceof ServerPlayer carrier)) return;
@@ -116,9 +121,9 @@ public class CarryManager {
                 .filter(e -> e.getValue().equals(carrier.getUUID()))
                 .map(Map.Entry::getKey)
                 .findFirst()
-                .ifPresent(knockedId -> {
+                .ifPresent(k -> {
                     ServerPlayer knocked = NetworkHandlerHelper.getPlayerByUuid(
-                            net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer(), knockedId);
+                            net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer(), k);
                     if (knocked != null) stopCarry(knocked, carrier);
                 });
     }
