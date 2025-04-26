@@ -14,15 +14,12 @@ public class KnockedTimeOverlay {
     @SubscribeEvent
     public static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
         if (!ClientKnockedState.isKnocked()) return;
-
         Minecraft mc = Minecraft.getInstance();
         GuiGraphics guiGraphics = event.getGuiGraphics();
         String text = "Time until recovery: " + (ClientKnockedState.getTimeLeft() / 20) + " s";
-
         int screenWidth = mc.getWindow().getGuiScaledWidth();
         int x = screenWidth / 2 - mc.font.width(text) / 2;
-        int y = 10; // 10 pixels from the top
-
+        int y = 10;
         guiGraphics.drawString(mc.font, text, x, y, 0xFFFFFF, true);
     }
 }

@@ -57,12 +57,15 @@ public class PlayerExecutionHandler {
         }
     }
 
-
     public static void register() {
         MinecraftForge.EVENT_BUS.register(new PlayerExecutionHandler());
     }
 
     public static void startExecution(ServerPlayer executor, Player target) {
+        if (KnockedManager.isKnocked(executor)) {
+            executor.sendSystemMessage(Component.literal("You cannot execute others while you are knocked!"));
+            return;
+        }
         UUID knockedId = target.getUUID();
         if (!KnockedManager.isKnocked(target)) return;
         if (CarryManager.isBeingCarried(target.getUUID())) {
