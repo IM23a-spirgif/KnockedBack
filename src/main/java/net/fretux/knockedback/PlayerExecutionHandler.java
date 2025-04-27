@@ -84,10 +84,18 @@ public class PlayerExecutionHandler {
             ServerPlayer knocked = getPlayerByUuid(knockedId);
             if (knocked != null) {
                 knocked.sendSystemMessage(Component.literal("Execution interrupted!"));
+                NetworkHandler.CHANNEL.send(
+                        PacketDistributor.PLAYER.with(() -> knocked),
+                        new ExecutionProgressPacket(0)
+                );
             }
             ServerPlayer executor = getPlayerByUuid(attempt.executorUuid);
             if (executor != null) {
                 executor.sendSystemMessage(Component.literal("Your execution was interrupted!"));
+                NetworkHandler.CHANNEL.send(
+                        PacketDistributor.PLAYER.with(() -> executor),
+                        new ExecutionProgressPacket(0)
+                );
             }
         }
     }

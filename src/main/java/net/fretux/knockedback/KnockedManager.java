@@ -65,6 +65,17 @@ public class KnockedManager {
             Map.Entry<UUID, Integer> entry = it.next();
             UUID playerId = entry.getKey();
             int timeLeft = entry.getValue();
+            if ( grippedEntities.contains(playerId)
+                    || CarryManager.isBeingCarried(playerId) ) {
+                ServerPlayer p = NetworkHandlerHelper.getPlayerByUuid(server, playerId);
+                if (p != null) {
+                    NetworkHandler.CHANNEL.send(
+                            PacketDistributor.PLAYER.with(() -> p),
+                            new KnockedTimePacket(timeLeft)
+                    );
+                }
+                continue;
+            }
             if (MobKillHandler.isBeingMobExecuted(playerId)
                     || PlayerExecutionHandler.isBeingPlayerExecuted(playerId)) {
                 ServerPlayer p = NetworkHandlerHelper.getPlayerByUuid(server, playerId);

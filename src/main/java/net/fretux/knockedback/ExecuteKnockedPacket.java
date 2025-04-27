@@ -6,6 +6,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.util.UUID;
 import java.util.function.Supplier;
 
 public class ExecuteKnockedPacket {
@@ -24,8 +25,13 @@ public class ExecuteKnockedPacket {
             if (executor == null) return;
             LivingEntity target = findNearestKnockedEntity(executor);
             if (target != null) {
-                if (target instanceof Player targetPlayer) {
-                    PlayerExecutionHandler.startExecution(executor, targetPlayer);
+                if (target instanceof Player tp) {
+                    UUID tid = tp.getUUID();
+                    if (PlayerExecutionHandler.isBeingPlayerExecuted(tid)) {
+                        PlayerExecutionHandler.cancelExecution(tid);
+                    } else {
+                        PlayerExecutionHandler.startExecution(executor, tp);
+                    }
                 }
             }
         });
