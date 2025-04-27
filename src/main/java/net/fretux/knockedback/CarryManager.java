@@ -10,6 +10,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.event.entity.EntityMountEvent;
 import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket;
+import net.minecraftforge.network.PacketDistributor;
 
 import java.util.*;
 
@@ -62,11 +63,15 @@ public class CarryManager {
     private static void stopCarry(Player knocked, ServerPlayer carrier) {
         knocked.stopRiding();
         carrying.remove(knocked.getUUID());
-        ClientboundSetPassengersPacket dismountPacket = new ClientboundSetPassengersPacket(carrier);
-        carrier.connection.send(dismountPacket);
-        if (knocked instanceof ServerPlayer spKnocked) {
-            spKnocked.connection.send(dismountPacket);
-        }
+        ClientboundSetPassengersPacket dismount = new ClientboundSetPassengersPacket(carrier);
+        NetworkHandler.CHANNEL.send(
+                PacketDistributor.TRACKING_ENTITY.with(() -> carrier),
+                dismount
+        );
+        NetworkHandler.CHANNEL.send(
+                PacketDistributor.PLAYER.with(() -> carrier),
+                dismount
+        );
         carrier.sendSystemMessage(Component.literal("Dropped " + knocked.getName().getString()));
         knocked.sendSystemMessage(Component.literal("You have been dropped"));
     }
