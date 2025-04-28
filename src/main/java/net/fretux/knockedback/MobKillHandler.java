@@ -1,179 +1,153 @@
 package net.fretux.knockedback;
 
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import org.jetbrains.annotations.Nullable;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.network.PacketDistributor;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import javax.annotation.Nullable;
+import java.util.*;
 
 import static net.fretux.knockedback.KnockedManager.removeKnockedState;
 import static net.fretux.knockedback.KnockedManager.setGripped;
 
+@Mod.EventBusSubscriber(modid = KnockedBack.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class MobKillHandler {
     private static final int EXECUTION_DELAY_TICKS = 3 * 20;
-
-    public static boolean isBeingMobExecuted(UUID knockedId) {
-        return killAttempts.containsKey(knockedId);
-    }
     private static final Map<UUID, KillAttempt> killAttempts = new HashMap<>();
+
     private static class KillAttempt {
         private final UUID mobUuid;
         private int timeLeft;
-
         public KillAttempt(UUID mobUuid, int timeLeft) {
             this.mobUuid = mobUuid;
             this.timeLeft = timeLeft;
         }
     }
 
+    public static boolean isBeingMobExecuted(UUID knockedId) {
+        return killAttempts.containsKey(knockedId);
+    }
+
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
-        if (event.phase == TickEvent.Phase.END && event.side.isServer()) {
-            tickKillAttempts();
-        }
+        if (event.phase != TickEvent.Phase.END || !event.side.isServer()) return;
+        tickKillAttempts();
     }
 
     @SubscribeEvent
     public void onMobHurt(LivingHurtEvent event) {
         LivingEntity entity = event.getEntity();
-        if (!(entity instanceof Mob mob)) {
-            return;
-        }
-        UUID mobUuid = mob.getUUID();
-        boolean mobWasReset = false;
-        UUID playerToRelease = null;
+        if (!(entity instanceof Mob mob)) return;
 
-        for (Map.Entry<UUID, KillAttempt> entry : killAttempts.entrySet()) {
-            KillAttempt attempt = entry.getValue();
-            if (attempt.mobUuid.equals(mobUuid)) {
-                playerToRelease = entry.getKey();
-                mobWasReset = true;
+        UUID mobUuid = mob.getUUID();
+        UUID toRelease = null;
+        for (var e : killAttempts.entrySet()) {
+            if (e.getValue().mobUuid.equals(mobUuid)) {
+                toRelease = e.getKey();
                 break;
             }
         }
-
-        if (playerToRelease != null) {
-            killAttempts.remove(playerToRelease);
-            Player player = getPlayerByUuid(playerToRelease);
-            if (player != null) {
-                KnockedManager.setGripped(player, false);
+        if (toRelease != null) {
+            killAttempts.remove(toRelease);
+            Player p = getPlayerByUuid(toRelease);
+            if (p != null) {
+                setGripped(p, false);
                 mob.setTarget(null);
                 mob.getNavigation().stop();
             }
         }
-
-        if (mobWasReset) {
-            System.out.println("Mob hit: Canceling execution attempt and releasing gripped player.");
-        }
-    }
-
-    public static void clearKillAttempt(UUID playerUuid) {
-        killAttempts.remove(playerUuid);
     }
 
     private void tickKillAttempts() {
-        Map<UUID, KillAttempt> updatedAttempts = new HashMap<>();
-
-        for (UUID knockedPlayerUuid : KnockedManager.getKnockedUuids()) {
-            Player knockedPlayer = getPlayerByUuid(knockedPlayerUuid);
-            if (knockedPlayer == null || !knockedPlayer.isAlive()) {
+        var server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+        Map<UUID, KillAttempt> updated = new HashMap<>();
+        for (UUID knockedId : KnockedManager.getKnockedUuids()) {
+            Player knocked = getPlayerByUuid(knockedId);
+            if (knocked == null || !knocked.isAlive()) continue;
+            if (CarryManager.isBeingCarried(knockedId)) {
+                setGripped(knocked, false);
                 continue;
             }
-            Mob mobInRange = getMobInRange(knockedPlayer);
-            if (mobInRange == null) {
-                setGripped(knockedPlayer, false);
+            Mob mob = getMobInRange(knocked);
+            if (mob == null) {
+                setGripped(knocked, false);
                 continue;
             }
-            setGripped(knockedPlayer, true);
-            KillAttempt attempt = killAttempts.get(knockedPlayerUuid);
-            if (attempt == null || !attempt.mobUuid.equals(mobInRange.getUUID())) {
-                attempt = new KillAttempt(mobInRange.getUUID(), EXECUTION_DELAY_TICKS);
+            setGripped(knocked, true);
+            KillAttempt attempt = killAttempts.get(knockedId);
+            if (attempt == null || !attempt.mobUuid.equals(mob.getUUID())) {
+                attempt = new KillAttempt(mob.getUUID(), EXECUTION_DELAY_TICKS);
             } else {
                 attempt.timeLeft--;
-                gripPlayer(knockedPlayer, mobInRange);
+                if (knocked instanceof ServerPlayer sp) {
+                    NetworkHandler.CHANNEL.send(
+                            PacketDistributor.PLAYER.with(() -> sp),
+                            new ExecutionProgressPacket(attempt.timeLeft)
+                    );
+                }
                 if (attempt.timeLeft <= 0) {
-                    executeKnockedPlayer(knockedPlayer, mobInRange);
+                    executeKnockedPlayer(knocked, mob);
                     continue;
                 }
             }
-            updatedAttempts.put(knockedPlayerUuid, attempt);
+            updated.put(knockedId, attempt);
         }
+
+        // 5) Replace the map
         killAttempts.clear();
-        killAttempts.putAll(updatedAttempts);
+        killAttempts.putAll(updated);
     }
 
-    private void gripPlayer(Player knockedPlayer, Mob mob) {
-        mob.setTarget(knockedPlayer);
+    private void executeKnockedPlayer(Player knocked, Mob mob) {
+        removeKnockedState(knocked);
+        knocked.setHealth(0.0F);
         mob.getNavigation().stop();
-        spawnExecutionParticles(knockedPlayer, mob);
-    }
-
-    private void executeKnockedPlayer(Player knockedPlayer, Mob mob) {
-        knockedPlayer.setHealth(0.0F);
-        mob.getNavigation().stop();
-        removeKnockedState(knockedPlayer);
-        knockedPlayer.sendSystemMessage(Component.literal(
+        if (knocked instanceof ServerPlayer sp) {
+            NetworkHandler.CHANNEL.send(
+                    PacketDistributor.PLAYER.with(() -> sp),
+                    new ExecutionProgressPacket(0)
+            );
+        }
+        knocked.sendSystemMessage(Component.literal(
                 "You were executed by " + mob.getName().getString() + "!"
         ));
     }
 
     @Nullable
-    private Mob getMobInRange(Player knockedPlayer) {
-        if (knockedPlayer.level() instanceof ServerLevel serverLevel) {
-            double range = 2.5;
-            AABB aabb = new AABB(
-                    knockedPlayer.getX() - range, knockedPlayer.getY() - range, knockedPlayer.getZ() - range,
-                    knockedPlayer.getX() + range, knockedPlayer.getY() + range, knockedPlayer.getZ() + range
-            );
-            return serverLevel.getEntitiesOfClass(Mob.class, aabb).stream()
-                    .filter(mob -> isHostile(mob) || isAggressiveNeutral(mob))
-                    .findAny()
-                    .orElse(null);
-        }
-        return null;
+    private Mob getMobInRange(Player p) {
+        if (!(p.level() instanceof ServerLevel world)) return null;
+        double r = 2.5;
+        AABB box = new AABB(
+                p.getX()-r, p.getY()-r, p.getZ()-r,
+                p.getX()+r, p.getY()+r, p.getZ()+r
+        );
+        return world.getEntitiesOfClass(Mob.class, box).stream()
+                .filter(m -> isHostile(m) || isAggressiveNeutral(m))
+                .findAny().orElse(null);
     }
 
-    private boolean isHostile(Mob mob) {
-        return mob instanceof net.minecraft.world.entity.monster.Monster;
+    private boolean isHostile(Mob m) {
+        return m instanceof net.minecraft.world.entity.monster.Monster;
     }
-
-    private boolean isAggressiveNeutral(Mob mob) {
-        if (mob instanceof net.minecraft.world.entity.animal.Wolf wolf) {
-            return wolf.isAngry();
-        }
-        if (mob instanceof net.minecraft.world.entity.monster.EnderMan enderman) {
-            return enderman.isCreepy();
-        }
+    private boolean isAggressiveNeutral(Mob m) {
+        if (m instanceof net.minecraft.world.entity.animal.Wolf w) return w.isAngry();
+        if (m instanceof net.minecraft.world.entity.monster.EnderMan e) return e.isCreepy();
         return false;
     }
 
     @Nullable
-    private Player getPlayerByUuid(UUID uuid) {
-        var server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
-        if (server != null) {
-            return server.getPlayerList().getPlayer(uuid);
-        }
-        return null;
-    }
-
-    private void spawnExecutionParticles(Player knockedPlayer, Mob mobInRange) {
-        if (knockedPlayer.level() instanceof ServerLevel serverLevel) {
-            serverLevel.sendParticles(
-                    net.minecraft.core.particles.ParticleTypes.ANGRY_VILLAGER,
-                    mobInRange.getX(),
-                    mobInRange.getY() + mobInRange.getBbHeight() / 2,
-                    mobInRange.getZ(),
-                    1, 0.1, 0.2, 0.1, 0.005
-            );
-        }
+    private Player getPlayerByUuid(UUID id) {
+        var srv = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+        return srv != null ? srv.getPlayerList().getPlayer(id) : null;
     }
 }
