@@ -4,6 +4,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Items;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -116,6 +117,10 @@ public class KnockedManager {
         if (!(entity instanceof Player player)) {
             return;
         }
+        if (player.getMainHandItem().getItem() == Items.TOTEM_OF_UNDYING
+                || player.getOffhandItem().getItem() == Items.TOTEM_OF_UNDYING) {
+            return;
+        }
         DamageSource src = event.getSource();
         String damageType = src.getMsgId();
         boolean isFatal = player.getHealth() - event.getAmount() <= 0;
@@ -133,12 +138,14 @@ public class KnockedManager {
                 damageType.equals("explosion") || damageType.equals("explosion.player") || damageType.equals("fireball")) {
             entity.setHealth(0.0F);
             removeKnockedState(entity);
+            PlayerExecutionHandler.cancelExecution(entity.getUUID());
             return;
         }
         if ((damageType.equals("fall") || damageType.equals("explosion") || damageType.equals("explosion.player")) &&
                 event.getAmount() >= entity.getHealth()) {
             entity.setHealth(0.0F);
             removeKnockedState(entity);
+            PlayerExecutionHandler.cancelExecution(entity.getUUID());
             return;
         }
         event.setCanceled(true);
