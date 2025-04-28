@@ -20,7 +20,7 @@ public class CarryManager {
 
     public static void toggleCarry(ServerPlayer carrier) {
         if (KnockedManager.isKnocked(carrier)) {
-            carrier.sendSystemMessage(Component.literal("You cannot carry others while you are knocked!"));
+            carrier.sendSystemMessage(Component.translatable("message.knockedback.cannot_carry_while_knocked"));
             return;
         }
         Optional<Player> existing = carrier.getPassengers().stream()
@@ -54,8 +54,8 @@ public class CarryManager {
         if (knocked instanceof ServerPlayer spKnocked) {
             spKnocked.connection.send(mountPacket);
         }
-        carrier.sendSystemMessage(Component.literal("Picked up " + knocked.getName().getString()));
-        knocked.sendSystemMessage(Component.literal("You are being carried by " + carrier.getName().getString()));
+        carrier.sendSystemMessage(Component.translatable("message.knockedback.picked_up" + knocked.getName().getString()));
+        knocked.sendSystemMessage(Component.translatable("message.knockedback.being_carried" + carrier.getName().getString()));
     }
 
 
@@ -67,8 +67,8 @@ public class CarryManager {
         if (knocked instanceof ServerPlayer spKnocked) {
             spKnocked.connection.send(dismountPacket);
         }
-        carrier.sendSystemMessage(Component.literal("Dropped " + knocked.getName().getString()));
-        knocked.sendSystemMessage(Component.literal("You have been dropped"));
+        carrier.sendSystemMessage(Component.translatable("message.knockedback.dropped" + knocked.getName().getString()));
+        knocked.sendSystemMessage(Component.translatable("message.knockedback.been_dropped"));
     }
 
     @SubscribeEvent

@@ -133,8 +133,8 @@ public class MobKillHandler {
                     new ExecutionProgressPacket(0)
             );
         }
-        knocked.sendSystemMessage(Component.literal(
-                "You were executed by " + mob.getName().getString() + "!"
+        knocked.sendSystemMessage(Component.translatable(
+                "message.knockedback.you_were_executed " + mob.getName().getString()
         ));
     }
 

@@ -1,6 +1,5 @@
 package net.fretux.knockedback.client;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.fretux.knockedback.KnockedBack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;

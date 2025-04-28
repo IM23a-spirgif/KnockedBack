@@ -63,19 +63,19 @@ public class PlayerExecutionHandler {
 
     public static void startExecution(ServerPlayer executor, Player target) {
         if (KnockedManager.isKnocked(executor)) {
-            executor.sendSystemMessage(Component.literal("You cannot execute others while you are knocked!"));
+            executor.sendSystemMessage(Component.translatable("message.knockedback.cannot_carry_while_knocked"));
             return;
         }
         UUID knockedId = target.getUUID();
         if (!KnockedManager.isKnocked(target)) return;
         if (CarryManager.isBeingCarried(target.getUUID())) {
-            executor.sendSystemMessage(Component.literal("Cannot execute someone you're carrying!"));
+            executor.sendSystemMessage(Component.translatable("message.knockedback.cannot_execute_while_knocked"));
             return;
         }
         if (executionAttempts.containsKey(knockedId)) return;
         executionAttempts.put(knockedId, new PlayerExecutionAttempt(executor.getUUID()));
-        executor.sendSystemMessage(Component.literal("Execution started..."));
-        target.sendSystemMessage(Component.literal("You're being executed!"));
+        executor.sendSystemMessage(Component.translatable("message.knockedback.execution_started"));
+        target.sendSystemMessage(Component.translatable("message.knockedback.being_executed"));
     }
 
     public static void cancelExecution(UUID knockedId) {
@@ -83,7 +83,7 @@ public class PlayerExecutionHandler {
         if (attempt != null) {
             ServerPlayer knocked = getPlayerByUuid(knockedId);
             if (knocked != null) {
-                knocked.sendSystemMessage(Component.literal("Execution interrupted!"));
+                knocked.sendSystemMessage(Component.translatable("message.knockedback.execution_interrupted"));
                 NetworkHandler.CHANNEL.send(
                         PacketDistributor.PLAYER.with(() -> knocked),
                         new ExecutionProgressPacket(0)
@@ -91,7 +91,7 @@ public class PlayerExecutionHandler {
             }
             ServerPlayer executor = getPlayerByUuid(attempt.executorUuid);
             if (executor != null) {
-                executor.sendSystemMessage(Component.literal("Your execution was interrupted!"));
+                executor.sendSystemMessage(Component.translatable("message.knockedback.execution_interrupted_executor"));
                 NetworkHandler.CHANNEL.send(
                         PacketDistributor.PLAYER.with(() -> executor),
                         new ExecutionProgressPacket(0)
@@ -106,7 +106,7 @@ public class PlayerExecutionHandler {
         UUID hurtId = hurtPlayer.getUUID();
         boolean wasExecutor = executionAttempts.values().removeIf(attempt -> attempt.executorUuid.equals(hurtId));
         if (wasExecutor) {
-            hurtPlayer.sendSystemMessage(Component.literal("Execution canceled because you were hit!"));
+            hurtPlayer.sendSystemMessage(Component.translatable("message.knockedback.execution_interrupted"));
         }
     }
 
@@ -130,9 +130,9 @@ public class PlayerExecutionHandler {
                     new ExecutionProgressPacket(0)
             );
         }
-        executor.sendSystemMessage(Component.literal("You executed " + knockedPlayer.getName().getString() + "!"));
+        executor.sendSystemMessage(Component.translatable("message.knockedback.you_executed" + knockedPlayer.getName().getString() + "!"));
         if (knockedPlayer instanceof ServerPlayer serverPlayer) {
-            serverPlayer.sendSystemMessage(Component.literal("You were executed by " + executor.getName().getString() + "!"));
+            serverPlayer.sendSystemMessage(Component.translatable("message.knockedback.you_were_executed" + executor.getName().getString() + "!"));
         }
     }
 

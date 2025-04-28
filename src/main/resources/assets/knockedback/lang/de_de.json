@@ -1,0 +1,22 @@
+{
+  "key.knockedback.carry": "Tragen",
+  "key.knockedback.execute": "Hinrichten",
+  "key.categories.knockedback": "Knockedback-Steuerung",
+
+  "message.knockedback.cannot_carry_while_knocked": "Du kannst niemanden tragen, während du betäubt bist!",
+  "message.knockedback.cannot_execute_while_knocked": "Du kannst niemanden hinrichten, während du betäubt bist!",
+  "message.knockedback.picked_up": "Hochgehoben %s",
+  "message.knockedback.being_carried": "Du wirst von %s getragen",
+  "message.knockedback.dropped": "Abgesetzt %s",
+  "message.knockedback.been_dropped": "Du wurdest abgesetzt",
+
+  "message.knockedback.execution_started": "Hinrichtung gestartet...",
+  "message.knockedback.being_executed": "Du wirst hingerichtet!",
+  "message.knockedback.execution_interrupted": "Hinrichtung abgebrochen!",
+  "message.knockedback.execution_interrupted_executor": "Deine Hinrichtung wurde abgebrochen!",
+  "message.knockedback.you_executed": "Du hast %s hingerichtet!",
+  "message.knockedback.you_were_executed": "Du wurdest von %s hingerichtet!",
+
+  "overlay.knockedback.recovery_time": "Zeit bis Erholung: %s s"
+}
+

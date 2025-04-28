@@ -4,6 +4,7 @@ import net.fretux.knockedback.KnockedBack;
 import net.fretux.knockedback.client.ClientKnockedState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -16,7 +17,7 @@ public class KnockedTimeOverlay {
         if (!ClientKnockedState.isKnocked()) return;
         Minecraft mc = Minecraft.getInstance();
         GuiGraphics guiGraphics = event.getGuiGraphics();
-        String text = "Time until recovery: " + (ClientKnockedState.getTimeLeft() / 20) + " s";
+        String text = I18n.get("overlay.knockedback.recovery_time", ClientKnockedState.getTimeLeft() / 20);
         int screenWidth = mc.getWindow().getGuiScaledWidth();
         int x = screenWidth / 2 - mc.font.width(text) / 2;
         int y = 10;

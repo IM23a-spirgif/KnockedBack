@@ -21,24 +21,22 @@ public class ClientKeyHandler {
             "key.categories.knockedback"
     );
 
-    // This event still needs to be registered on the MOD bus for key mapping registration.
-    @Mod.EventBusSubscriber(modid = "knockedback", value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
-    public static class KeyMappingRegistration {
-        @SubscribeEvent
-        public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
-            event.register(EXECUTE_KEY);
-        }
-    }
-
     public static final KeyMapping CARRY_KEY = new KeyMapping(
             "key.knockedback.carry",
             GLFW.GLFW_KEY_V,
             "key.categories.knockedback"
     );
 
-    @SubscribeEvent
-    public static void registerCarryKey(RegisterKeyMappingsEvent e) {
-        e.register(CARRY_KEY);
+    @Mod.EventBusSubscriber(modid = "knockedback", value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+    public static class KeyMappingRegistration {
+        @SubscribeEvent
+        public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
+            event.register(EXECUTE_KEY);
+        }
+        @SubscribeEvent
+        public static void registerCarryKey(RegisterKeyMappingsEvent e) {
+            e.register(CARRY_KEY);
+        }
     }
 
     @SubscribeEvent
@@ -46,10 +44,6 @@ public class ClientKeyHandler {
         if (Minecraft.getInstance().screen != null) return;
         if (EXECUTE_KEY.consumeClick()) {
             if (Minecraft.getInstance().player != null) {
-                Minecraft.getInstance().player.sendSystemMessage(
-                        Component.literal("Key B pressed! Sending execution request to server.")
-                );
-                // Send the packet to the server
                 NetworkHandler.CHANNEL.sendToServer(new ExecuteKnockedPacket());
             }
         }

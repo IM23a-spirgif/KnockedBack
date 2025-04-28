@@ -1,0 +1,18 @@
+{
+  "key.knockedback.carry": "Carry",
+  "key.knockedback.execute": "Execute",
+  "key.categories.knockedback": "Knockedback Controls",
+  "message.knockedback.cannot_carry_while_knocked": "You cannot carry others while you are knocked!",
+  "message.knockedback.cannot_execute_while_knocked": "You cannot execute others while you are knocked!",
+  "message.knockedback.picked_up": "Picked up %s",
+  "message.knockedback.being_carried": "You are being carried by %s",
+  "message.knockedback.dropped": "Dropped %s",
+  "message.knockedback.been_dropped": "You have been dropped",
+  "message.knockedback.execution_started": "Execution started...",
+  "message.knockedback.being_executed": "You're being executed!",
+  "message.knockedback.execution_interrupted": "Execution interrupted!",
+  "message.knockedback.execution_interrupted_executor": "Your execution was interrupted!",
+  "message.knockedback.you_executed": "You executed %s!",
+  "message.knockedback.you_were_executed": "You were executed by %s!",
+  "overlay.knockedback.recovery_time": "Time until recovery: %s s"
+}
