@@ -116,13 +116,26 @@ public class PlayerExecutionHandler {
     }
 
     public static void executeKnockedPlayer(ServerPlayer executor, LivingEntity knockedPlayer) {
+        UUID id = knockedPlayer.getUUID();
         KnockedManager.removeKnockedState(knockedPlayer);
+        cancelExecution(id);
         knockedPlayer.kill();
+        NetworkHandler.CHANNEL.send(
+                PacketDistributor.PLAYER.with(() -> executor),
+                new ExecutionProgressPacket(0)
+        );
+        if (knockedPlayer instanceof ServerPlayer sp) {
+            NetworkHandler.CHANNEL.send(
+                    PacketDistributor.PLAYER.with(() -> sp),
+                    new ExecutionProgressPacket(0)
+            );
+        }
         executor.sendSystemMessage(Component.literal("You executed " + knockedPlayer.getName().getString() + "!"));
         if (knockedPlayer instanceof ServerPlayer serverPlayer) {
             serverPlayer.sendSystemMessage(Component.literal("You were executed by " + executor.getName().getString() + "!"));
         }
     }
+
 
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent event) {
