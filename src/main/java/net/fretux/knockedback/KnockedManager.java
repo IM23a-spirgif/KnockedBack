@@ -87,10 +87,8 @@ public class KnockedManager {
                 }
                 continue;
             }
-            // ② Otherwise count down as normal:
             timeLeft--;
             if (timeLeft <= 0) {
-                // send final zero
                 ServerPlayer p = NetworkHandlerHelper.getPlayerByUuid(server, playerId);
                 if (p != null) {
                     NetworkHandler.CHANNEL.send(
@@ -100,7 +98,6 @@ public class KnockedManager {
                 }
                 it.remove();
             } else {
-                // update and send
                 entry.setValue(timeLeft);
                 ServerPlayer p = NetworkHandlerHelper.getPlayerByUuid(server, playerId);
                 if (p != null) {
