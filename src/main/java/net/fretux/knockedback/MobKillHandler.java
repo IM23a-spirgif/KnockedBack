@@ -102,8 +102,6 @@ public class MobKillHandler {
             }
             updated.put(knockedId, attempt);
         }
-
-        // 5) Replace the map
         killAttempts.clear();
         killAttempts.putAll(updated);
     }
@@ -149,5 +147,9 @@ public class MobKillHandler {
     private Player getPlayerByUuid(UUID id) {
         var srv = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
         return srv != null ? srv.getPlayerList().getPlayer(id) : null;
+    }
+
+    public static void clearKillAttempt(UUID playerUuid) {
+        killAttempts.remove(playerUuid);
     }
 }
