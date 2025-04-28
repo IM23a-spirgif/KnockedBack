@@ -65,8 +65,8 @@ public class KnockedManager {
             Map.Entry<UUID, Integer> entry = it.next();
             UUID playerId = entry.getKey();
             int timeLeft = entry.getValue();
-            if ( grippedEntities.contains(playerId)
-                    || CarryManager.isBeingCarried(playerId) ) {
+            if (grippedEntities.contains(playerId)
+                    || CarryManager.isBeingCarried(playerId)) {
                 ServerPlayer p = NetworkHandlerHelper.getPlayerByUuid(server, playerId);
                 if (p != null) {
                     NetworkHandler.CHANNEL.send(
@@ -113,16 +113,17 @@ public class KnockedManager {
     @SubscribeEvent
     public static void onLivingHurt(LivingHurtEvent event) {
         LivingEntity entity = event.getEntity();
-        DamageSource source = event.getSource();
-        String damageType = source.getMsgId();
-        boolean isFatal = entity.getHealth() - event.getAmount() <= 0;
+        if (!(entity instanceof Player player)) {
+            return;
+        }
+        DamageSource src = event.getSource();
+        String damageType = src.getMsgId();
+        boolean isFatal = player.getHealth() - event.getAmount() <= 0;
         if (!isKnocked(entity)) {
-            if (entity instanceof Player player && isFatal) {
-                if (!(damageType.equals("fall") || damageType.equals("explosion") || damageType.equals("explosion.player") ||
-                        damageType.equals("fire") || damageType.equals("lava") || damageType.equals("onFire") ||
-                        damageType.equals("fireball"))) {
+            if (isFatal) {
+                if (src.getEntity() instanceof LivingEntity) {
                     event.setCanceled(true);
-                    applyKnockedState(player);
+                    applyKnockedState(entity);
                 }
             }
             return;

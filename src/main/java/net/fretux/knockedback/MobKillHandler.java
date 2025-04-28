@@ -27,6 +27,7 @@ public class MobKillHandler {
     private static class KillAttempt {
         private final UUID mobUuid;
         private int timeLeft;
+
         public KillAttempt(UUID mobUuid, int timeLeft) {
             this.mobUuid = mobUuid;
             this.timeLeft = timeLeft;
@@ -124,7 +125,7 @@ public class MobKillHandler {
 
     private void executeKnockedPlayer(Player knocked, Mob mob) {
         removeKnockedState(knocked);
-        knocked.setHealth(0.0F);
+        knocked.kill();
         mob.getNavigation().stop();
         if (knocked instanceof ServerPlayer sp) {
             NetworkHandler.CHANNEL.send(
@@ -142,8 +143,8 @@ public class MobKillHandler {
         if (!(p.level() instanceof ServerLevel world)) return null;
         double r = 2.5;
         AABB box = new AABB(
-                p.getX()-r, p.getY()-r, p.getZ()-r,
-                p.getX()+r, p.getY()+r, p.getZ()+r
+                p.getX() - r, p.getY() - r, p.getZ() - r,
+                p.getX() + r, p.getY() + r, p.getZ() + r
         );
         return world.getEntitiesOfClass(Mob.class, box).stream()
                 .filter(m -> isHostile(m) || isAggressiveNeutral(m))
@@ -153,6 +154,7 @@ public class MobKillHandler {
     private boolean isHostile(Mob m) {
         return m instanceof net.minecraft.world.entity.monster.Monster;
     }
+
     private boolean isAggressiveNeutral(Mob m) {
         if (m instanceof net.minecraft.world.entity.animal.Wolf w) return w.isAngry();
         if (m instanceof net.minecraft.world.entity.monster.EnderMan e) return e.isCreepy();

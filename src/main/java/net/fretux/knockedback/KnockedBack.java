@@ -2,6 +2,8 @@ package net.fretux.knockedback;
 
 import com.mojang.logging.LogUtils;
 import net.fretux.knockedback.effects.KnockedEffect;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
@@ -40,7 +42,8 @@ public class KnockedBack {
 
     @SubscribeEvent
     public void onLivingDeath(LivingDeathEvent event) {
-        if (KnockedManager.isKnocked(event.getEntity())) {
+        LivingEntity victim = event.getEntity();
+        if (victim instanceof Player player && KnockedManager.isKnocked(player)) {
             event.setCanceled(true);
         }
     }

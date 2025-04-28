@@ -117,7 +117,7 @@ public class PlayerExecutionHandler {
 
     public static void executeKnockedPlayer(ServerPlayer executor, LivingEntity knockedPlayer) {
         KnockedManager.removeKnockedState(knockedPlayer);
-        knockedPlayer.setHealth(0.0F);
+        knockedPlayer.kill();
         executor.sendSystemMessage(Component.literal("You executed " + knockedPlayer.getName().getString() + "!"));
         if (knockedPlayer instanceof ServerPlayer serverPlayer) {
             serverPlayer.sendSystemMessage(Component.literal("You were executed by " + executor.getName().getString() + "!"));
