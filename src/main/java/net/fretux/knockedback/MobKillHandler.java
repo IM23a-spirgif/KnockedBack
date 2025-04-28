@@ -49,30 +49,19 @@ public class MobKillHandler {
         }
     }
 
-    /**
-     * Runs once per server tick; we look for mobs near knocked players
-     * and handle the execution countdown.
-     */
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
-        // Only run logic at the END of each tick on the server
         if (event.phase == TickEvent.Phase.END && event.side.isServer()) {
             tickKillAttempts();
         }
     }
 
-    /**
-     * Resets the kill timer if the mob about to perform the kill is attacked.
-     * "If they're hit in those 3 seconds, the timer resets."
-     */
     @SubscribeEvent
     public void onMobHurt(LivingHurtEvent event) {
         LivingEntity entity = event.getEntity();
-
         if (!(entity instanceof Mob mob)) {
             return;
         }
-
         UUID mobUuid = mob.getUUID();
         boolean mobWasReset = false;
         UUID playerToRelease = null;
@@ -82,7 +71,7 @@ public class MobKillHandler {
             if (attempt.mobUuid.equals(mobUuid)) {
                 playerToRelease = entry.getKey();
                 mobWasReset = true;
-                break; // Break early because we will remove later
+                break;
             }
         }
 
@@ -105,9 +94,6 @@ public class MobKillHandler {
         killAttempts.remove(playerUuid);
     }
 
-    /**
-     * Main logic to find mobs near knocked players and manage execution timers.
-     */
     private void tickKillAttempts() {
         Map<UUID, KillAttempt> updatedAttempts = new HashMap<>();
 
@@ -139,18 +125,12 @@ public class MobKillHandler {
         killAttempts.putAll(updatedAttempts);
     }
 
-    /**
-     * Handles gripping behavior where the mob focuses on the knocked player.
-     */
     private void gripPlayer(Player knockedPlayer, Mob mob) {
         mob.setTarget(knockedPlayer);
         mob.getNavigation().stop();
         spawnExecutionParticles(knockedPlayer, mob);
     }
 
-    /**
-     * Executes the knocked player when the countdown finishes.
-     */
     private void executeKnockedPlayer(Player knockedPlayer, Mob mob) {
         knockedPlayer.setHealth(0.0F);
         mob.getNavigation().stop();
@@ -160,10 +140,6 @@ public class MobKillHandler {
         ));
     }
 
-    /**
-     * Find a mob that is within a certain range of the knocked player.
-     * Only hostile mobs, aggressive neutral mobs, and players are considered.
-     */
     @Nullable
     private Mob getMobInRange(Player knockedPlayer) {
         if (knockedPlayer.level() instanceof ServerLevel serverLevel) {
@@ -180,16 +156,10 @@ public class MobKillHandler {
         return null;
     }
 
-    /**
-     * Checks if a mob is hostile (e.g., zombies, skeletons).
-     */
     private boolean isHostile(Mob mob) {
         return mob instanceof net.minecraft.world.entity.monster.Monster;
     }
 
-    /**
-     * Checks if a neutral mob is aggressive (e.g., a wolf that has been attacked).
-     */
     private boolean isAggressiveNeutral(Mob mob) {
         if (mob instanceof net.minecraft.world.entity.animal.Wolf wolf) {
             return wolf.isAngry();
@@ -200,9 +170,6 @@ public class MobKillHandler {
         return false;
     }
 
-    /**
-     * Helper to retrieve a Player by UUID from the server.
-     */
     @Nullable
     private Player getPlayerByUuid(UUID uuid) {
         var server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
