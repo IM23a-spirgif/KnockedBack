@@ -18,27 +18,13 @@ import java.util.UUID;
 import static net.fretux.knockedback.KnockedManager.removeKnockedState;
 import static net.fretux.knockedback.KnockedManager.setGripped;
 
-/**
- * Manages the logic for mobs killing knocked players after a 3-second delay,
- * which resets if the mob is hit during those 3 seconds.
- */
 public class MobKillHandler {
     private static final int EXECUTION_DELAY_TICKS = 3 * 20;
 
     public static boolean isBeingMobExecuted(UUID knockedId) {
         return killAttempts.containsKey(knockedId);
     }
-    /**
-     * A record of ongoing kill attempts.
-     * Key = Knocked player's UUID
-     * Value = An object tracking the mob's UUID & the countdown in ticks.
-     */
     private static final Map<UUID, KillAttempt> killAttempts = new HashMap<>();
-
-    /**
-     * Data structure to hold which mob is trying to kill a knocked player,
-     * along with how many ticks remain before execution.
-     */
     private static class KillAttempt {
         private final UUID mobUuid;
         private int timeLeft;
