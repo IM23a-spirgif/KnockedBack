@@ -7,7 +7,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -48,7 +47,6 @@ public class MobKillHandler {
     public void onMobHurt(LivingHurtEvent event) {
         LivingEntity entity = event.getEntity();
         if (!(entity instanceof Mob mob)) return;
-
         UUID mobUuid = mob.getUUID();
         UUID toRelease = null;
         for (var e : killAttempts.entrySet()) {
@@ -61,6 +59,12 @@ public class MobKillHandler {
             killAttempts.remove(toRelease);
             Player p = getPlayerByUuid(toRelease);
             if (p != null) {
+                if (p instanceof ServerPlayer sp) {
+                    NetworkHandler.CHANNEL.send(
+                            PacketDistributor.PLAYER.with(() -> sp),
+                            new ExecutionProgressPacket(0)
+                    );
+                }
                 setGripped(p, false);
                 mob.setTarget(null);
                 mob.getNavigation().stop();
@@ -75,11 +79,23 @@ public class MobKillHandler {
             Player knocked = getPlayerByUuid(knockedId);
             if (knocked == null || !knocked.isAlive()) continue;
             if (CarryManager.isBeingCarried(knockedId)) {
+                if (knocked instanceof ServerPlayer sp) {
+                    NetworkHandler.CHANNEL.send(
+                            PacketDistributor.PLAYER.with(() -> sp),
+                            new ExecutionProgressPacket(0)
+                    );
+                }
                 setGripped(knocked, false);
                 continue;
             }
             Mob mob = getMobInRange(knocked);
             if (mob == null) {
+                if (knocked instanceof ServerPlayer sp) {
+                    NetworkHandler.CHANNEL.send(
+                            PacketDistributor.PLAYER.with(() -> sp),
+                            new ExecutionProgressPacket(0)
+                    );
+                }
                 setGripped(knocked, false);
                 continue;
             }
