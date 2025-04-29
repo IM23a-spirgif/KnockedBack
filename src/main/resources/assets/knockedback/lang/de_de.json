@@ -5,9 +5,9 @@
 
   "message.knockedback.cannot_carry_while_knocked": "Du kannst niemanden tragen, während du betäubt bist!",
   "message.knockedback.cannot_execute_while_knocked": "Du kannst niemanden hinrichten, während du betäubt bist!",
-  "message.knockedback.picked_up": "Hochgehoben %s",
+  "message.knockedback.picked_up": "%s wurde Aufgehoben",
   "message.knockedback.being_carried": "Du wirst von %s getragen",
-  "message.knockedback.dropped": "Abgesetzt %s",
+  "message.knockedback.dropped": "%s wurde Abgesetzt",
   "message.knockedback.been_dropped": "Du wurdest abgesetzt",
 
   "message.knockedback.execution_started": "Hinrichtung gestartet...",
