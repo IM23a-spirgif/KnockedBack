@@ -25,7 +25,7 @@ public class CarryManager {
         }
         Optional<Player> existing = carrier.getPassengers().stream()
                 .filter(p -> p instanceof Player)
-                .map(p -> (Player)p)
+                .map(p -> (Player) p)
                 .findFirst();
         if (existing.isPresent()) {
             stopCarry(existing.get(), carrier);
@@ -54,8 +54,8 @@ public class CarryManager {
         if (knocked instanceof ServerPlayer spKnocked) {
             spKnocked.connection.send(mountPacket);
         }
-        carrier.sendSystemMessage(Component.translatable("message.knockedback.picked_up" + knocked.getName().getString()));
-        knocked.sendSystemMessage(Component.translatable("message.knockedback.being_carried" + carrier.getName().getString()));
+        carrier.sendSystemMessage(Component.translatable("message.knockedback.picked_up", knocked.getDisplayName()));
+        knocked.sendSystemMessage(Component.translatable("message.knockedback.being_carried", carrier.getDisplayName()));
     }
 
 
@@ -67,8 +67,8 @@ public class CarryManager {
         if (knocked instanceof ServerPlayer spKnocked) {
             spKnocked.connection.send(dismountPacket);
         }
-        carrier.sendSystemMessage(Component.translatable("message.knockedback.dropped" + knocked.getName().getString()));
-        knocked.sendSystemMessage(Component.translatable("message.knockedback.been_dropped"));
+        carrier.sendSystemMessage(Component.translatable("message.knockedback.dropped", knocked.getDisplayName()));
+        knocked.sendSystemMessage(Component.translatable("message.knockedback.been_dropped", carrier.getDisplayName()));
     }
 
     @SubscribeEvent

@@ -130,9 +130,9 @@ public class PlayerExecutionHandler {
                     new ExecutionProgressPacket(0)
             );
         }
-        executor.sendSystemMessage(Component.translatable("message.knockedback.you_executed" + knockedPlayer.getName().getString() + "!"));
+        executor.sendSystemMessage(Component.translatable("message.knockedback.you_executed", knockedPlayer.getDisplayName(), "!"));
         if (knockedPlayer instanceof ServerPlayer serverPlayer) {
-            serverPlayer.sendSystemMessage(Component.translatable("message.knockedback.you_were_executed" + executor.getName().getString() + "!"));
+            serverPlayer.sendSystemMessage(Component.translatable("message.knockedback.you_were_executed", executor.getDisplayName(), "!"));
         }
     }
 
