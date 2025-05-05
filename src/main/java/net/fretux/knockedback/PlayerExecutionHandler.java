@@ -21,7 +21,6 @@ import java.util.UUID;
 public class PlayerExecutionHandler {
     public static final double EXECUTION_RANGE = 2.0;
     public static final int EXECUTION_DELAY_TICKS = 60;
-
     public static boolean isBeingPlayerExecuted(UUID knockedId) {
         return executionAttempts.containsKey(knockedId);
     }
