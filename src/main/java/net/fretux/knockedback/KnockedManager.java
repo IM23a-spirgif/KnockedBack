@@ -5,6 +5,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -27,6 +28,20 @@ public class KnockedManager {
             entity.setHealth(1.0F);
         }
     }
+
+    @SubscribeEvent
+    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        if (!(event.player instanceof ServerPlayer sp)) return;
+        if (KnockedManager.isKnocked(sp)) {
+            boolean grounded = sp.onGround() || sp.isInWater();
+            sp.setNoGravity(false); // Always allow gravity
+            if (!grounded) {
+                sp.setDeltaMovement(0, sp.getDeltaMovement().y() - 0.08, 0); // Gravity acceleration
+            }
+        }
+
+    }
+
 
 
     public static boolean isKnocked(LivingEntity entity) {

@@ -16,10 +16,10 @@ public class KnockedEffect {
     public static void onPlayerTick(LivingEvent.LivingTickEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
         if (KnockedManager.isKnocked(player)) {
-            player.setDeltaMovement(0, 0, 0);
             player.setSprinting(false);
             player.hurtMarked = true;
             player.setNoGravity(false);
+            player.setDeltaMovement(0, player.getDeltaMovement().y(), 0);
         }
     }
 

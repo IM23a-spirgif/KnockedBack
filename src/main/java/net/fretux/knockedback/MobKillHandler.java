@@ -144,17 +144,25 @@ public class MobKillHandler {
                 p.getX() + r, p.getY() + r, p.getZ() + r
         );
         return world.getEntitiesOfClass(Mob.class, box).stream()
-                .filter(m -> isHostile(m) || isAggressiveNeutral(m))
+                .filter(m -> isHostile(m) || isAggressiveNeutral(m, p))
                 .findAny().orElse(null);
     }
+
 
     private boolean isHostile(Mob m) {
         return m instanceof net.minecraft.world.entity.monster.Monster;
     }
 
-    private boolean isAggressiveNeutral(Mob m) {
-        if (m instanceof net.minecraft.world.entity.animal.Wolf w) return w.isAngry();
-        if (m instanceof net.minecraft.world.entity.monster.EnderMan e) return e.isCreepy();
+    private boolean isAggressiveNeutral(Mob mob, Player target) {
+        if (mob instanceof net.minecraft.world.entity.animal.Wolf wolf) {
+            return wolf.isAngry() && wolf.getTarget() == target;
+        }
+        if (mob instanceof net.minecraft.world.entity.monster.EnderMan enderman) {
+            return enderman.isCreepy() && enderman.getTarget() == target;
+        }
+        if (mob instanceof net.minecraft.world.entity.animal.IronGolem golem) {
+            return golem.getTarget() == target;
+        }
         return false;
     }
 
