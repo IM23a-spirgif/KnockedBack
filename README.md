@@ -1,4 +1,4 @@
-KnockedBack replaces traditional deaths from most damage types with a “knocked out” state, letting players and mobs deliver the final blow—or even rescue their allies—before true death occurs.
+KnockedBack replaces traditional deaths from most damage types with a “knocked out” state, letting players and mobs deliver the final blow, or even rescue their allies, before true death occurs.
 
 Lethal damage is canceled and the player is left at 1 HP in a helpless, immobile state for 20 seconds. While knocked you can’t move, sprint, jump, break blocks, attack, or interact. After those 20 seconds have passed, the player can move again and continue fighting. 
 
