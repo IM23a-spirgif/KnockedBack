@@ -1,6 +1,5 @@
 package net.fretux.knockedback;
 
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
@@ -12,6 +11,7 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
+import net.fretux.knockedback.config.Config;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -21,7 +21,10 @@ import static net.fretux.knockedback.KnockedManager.setGripped;
 
 @Mod.EventBusSubscriber(modid = KnockedBack.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class MobKillHandler {
-    private static final int EXECUTION_DELAY_TICKS = 3 * 20;
+    public static int getExecutionTime() {
+        return Config.COMMON.executionTime.get();
+    }
+
     private static final Map<UUID, KillAttempt> killAttempts = new HashMap<>();
 
     private static class KillAttempt {
@@ -46,6 +49,7 @@ public class MobKillHandler {
 
     @SubscribeEvent
     public void onMobHurt(LivingHurtEvent event) {
+        if (!Config.COMMON.mobsCanExecute.get()) return;
         LivingEntity entity = event.getEntity();
         if (!(entity instanceof Mob mob)) return;
         UUID mobUuid = mob.getUUID();
@@ -75,6 +79,10 @@ public class MobKillHandler {
 
     private void tickKillAttempts() {
         var server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (!net.fretux.knockedback.config.Config.COMMON.mobsCanExecute.get()) {
+            killAttempts.clear();
+            return;
+        }
         Map<UUID, KillAttempt> updated = new HashMap<>();
         for (UUID knockedId : KnockedManager.getKnockedUuids()) {
             Player knocked = getPlayerByUuid(knockedId);
@@ -103,7 +111,7 @@ public class MobKillHandler {
             setGripped(knocked, true);
             KillAttempt attempt = killAttempts.get(knockedId);
             if (attempt == null || !attempt.mobUuid.equals(mob.getUUID())) {
-                attempt = new KillAttempt(mob.getUUID(), EXECUTION_DELAY_TICKS);
+                attempt = new KillAttempt(mob.getUUID(), getExecutionTime());
             } else {
                 attempt.timeLeft--;
                 if (knocked instanceof ServerPlayer sp) {

@@ -1,5 +1,6 @@
 package net.fretux.knockedback;
 
+import net.fretux.knockedback.config.Config;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -20,7 +21,9 @@ import java.util.UUID;
 @Mod.EventBusSubscriber(modid = "knockedback", bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class PlayerExecutionHandler {
     public static final double EXECUTION_RANGE = 2.0;
-    public static final int EXECUTION_DELAY_TICKS = 60;
+    public static int getExecutionTime() {
+        return Config.COMMON.executionTime.get();
+    }
     public static boolean isBeingPlayerExecuted(UUID knockedId) {
         return executionAttempts.containsKey(knockedId);
     }
@@ -52,12 +55,12 @@ public class PlayerExecutionHandler {
 
         public PlayerExecutionAttempt(UUID executorUuid) {
             this.executorUuid = executorUuid;
-            this.timeLeft = EXECUTION_DELAY_TICKS;
+            this.timeLeft = getExecutionTime();
         }
     }
 
     public static void register() {
-        MinecraftForge.EVENT_BUS.register(new PlayerExecutionHandler());
+         MinecraftForge.EVENT_BUS.register(new PlayerExecutionHandler());
     }
 
     public static void startExecution(ServerPlayer executor, Player target) {

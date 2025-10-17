@@ -79,6 +79,13 @@ minecraft {
                     source sourceSets.main
                 }
             }
+            jvmArgs += [
+                    "--add-opens=java.base/java.lang=ALL-UNNAMED",
+                    "--add-opens=java.base/java.lang.module=ALL-UNNAMED",
+                    "--add-exports=java.base/jdk.internal.module=ALL-UNNAMED",
+                    "--add-reads=knockedback=ALL-UNNAMED",
+                    "--add-modules=ALL-SYSTEM"
+            ]
         }
 
         client {

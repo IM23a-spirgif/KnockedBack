@@ -12,7 +12,6 @@ import net.minecraftforge.fml.common.Mod;
 public class ExecutionProgressOverlay {
     private static final int BAR_WIDTH = 100;
     private static final int BAR_HEIGHT = 8;
-    private static final int TOTAL_TICKS = net.fretux.knockedback.PlayerExecutionHandler.EXECUTION_DELAY_TICKS;
 
     @SubscribeEvent
     public static void onRender(RenderGuiOverlayEvent.Post event) {
@@ -23,7 +22,8 @@ public class ExecutionProgressOverlay {
         int sh = mc.getWindow().getGuiScaledHeight();
         int x = (sw - BAR_WIDTH) / 2;
         int y = (sh - BAR_HEIGHT) / 2;
-        float progress = 1.0f - (ClientExecutionState.getTimeLeft() / (float) TOTAL_TICKS);
+        int totalTicks = net.fretux.knockedback.PlayerExecutionHandler.getExecutionTime();
+        float progress = 1.0f - (ClientExecutionState.getTimeLeft() / (float) totalTicks);
         int fillWidth = (int) (BAR_WIDTH * progress);
         gui.fill(x, y, x + BAR_WIDTH, y + BAR_HEIGHT, 0x80000000);
         gui.fill(x, y, x + fillWidth, y + BAR_HEIGHT, 0x80FFFFFF);

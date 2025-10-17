@@ -10,6 +10,7 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
+import net.fretux.knockedback.config.Config;
 
 import java.util.*;
 
@@ -17,14 +18,17 @@ import java.util.*;
 public class KnockedManager {
     private static final Map<UUID, Integer> knockedEntities = new HashMap<>();
     private static final Set<UUID> grippedEntities = new HashSet<>();
-    private static final int KNOCKED_DURATION = 400;
+
+    private static int getKnockedDuration() {
+        return Config.COMMON.knockedDuration.get();
+    }
 
     public static void applyKnockedState(LivingEntity entity) {
         if (!(entity instanceof Player)) {
             return;
         }
         if (!isKnocked(entity)) {
-            knockedEntities.put(entity.getUUID(), KNOCKED_DURATION);
+            knockedEntities.put(entity.getUUID(), getKnockedDuration());
             entity.setHealth(1.0F);
         }
     }
@@ -34,14 +38,13 @@ public class KnockedManager {
         if (!(event.player instanceof ServerPlayer sp)) return;
         if (KnockedManager.isKnocked(sp)) {
             boolean grounded = sp.onGround() || sp.isInWater();
-            sp.setNoGravity(false); // Always allow gravity
+            sp.setNoGravity(false);
             if (!grounded) {
-                sp.setDeltaMovement(0, sp.getDeltaMovement().y() - 0.08, 0); // Gravity acceleration
+                sp.setDeltaMovement(0, sp.getDeltaMovement().y() - 0.08, 0);
             }
         }
 
     }
-
 
 
     public static boolean isKnocked(LivingEntity entity) {
@@ -126,43 +129,45 @@ public class KnockedManager {
         }
     }
 
+    private static void killAndRemove(LivingEntity entity) {
+        removeKnockedState(entity);
+        entity.kill();
+    }
+
     @SubscribeEvent
     public static void onLivingHurt(LivingHurtEvent event) {
         LivingEntity entity = event.getEntity();
-        if (!(entity instanceof Player player)) {
-            return;
-        }
-        if (player.getMainHandItem().getItem() == Items.TOTEM_OF_UNDYING
-                || player.getOffhandItem().getItem() == Items.TOTEM_OF_UNDYING) {
-            return;
-        }
+        if (!(entity instanceof Player player)) return;
         DamageSource src = event.getSource();
         String damageType = src.getMsgId();
         boolean isFatal = player.getHealth() - event.getAmount() <= 0;
-        if (!isKnocked(entity)) {
-            if (isFatal) {
-                if (src.getEntity() instanceof LivingEntity) {
-                    event.setCanceled(true);
-                    applyKnockedState(entity);
-                }
+        if (isFatal && Config.COMMON.explosionsBypassKnockdown.get() &&
+                (damageType.contains("explosion") || damageType.contains("fireworks"))) {
+            killAndRemove(player);
+            return;
+        }
+        if (isFatal && Config.COMMON.fallDamageBypassesKnockdown.get() && damageType.contains("fall")) {
+            killAndRemove(player);
+            return;
+        }
+        if (isFatal && Config.COMMON.lavaBypassesKnockdown.get() &&
+                (damageType.contains("lava") || damageType.contains("inFire") ||
+                        damageType.contains("fire") || damageType.contains("onFire") ||
+                        damageType.contains("fireball") || damageType.contains("hotFloor"))) {
+            killAndRemove(player);
+            return;
+        }
+        boolean hasTotem = player.getMainHandItem().is(Items.TOTEM_OF_UNDYING)
+                || player.getOffhandItem().is(Items.TOTEM_OF_UNDYING);
+        if (isFatal && !isKnocked(entity)) {
+            if (!hasTotem || !Config.COMMON.totemPreventsKnockdown.get()) {
+                event.setCanceled(true);
+                applyKnockedState(entity);
             }
-            return;
         }
-        knockedEntities.put(entity.getUUID(), KNOCKED_DURATION);
-        if (damageType.equals("fire") || damageType.equals("lava") || damageType.equals("onFire") ||
-                damageType.equals("explosion") || damageType.equals("explosion.player") || damageType.equals("fireball")) {
-            entity.setHealth(0.0F);
-            removeKnockedState(entity);
-            PlayerExecutionHandler.cancelExecution(entity.getUUID());
-            return;
+        if (isKnocked(entity)) {
+            knockedEntities.put(entity.getUUID(), getKnockedDuration());
+            event.setCanceled(true);
         }
-        if ((damageType.equals("fall") || damageType.equals("explosion") || damageType.equals("explosion.player")) &&
-                event.getAmount() >= entity.getHealth()) {
-            entity.setHealth(0.0F);
-            removeKnockedState(entity);
-            PlayerExecutionHandler.cancelExecution(entity.getUUID());
-            return;
-        }
-        event.setCanceled(true);
     }
 }
