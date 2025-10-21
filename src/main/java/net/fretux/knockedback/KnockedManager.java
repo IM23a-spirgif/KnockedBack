@@ -1,5 +1,6 @@
 package net.fretux.knockedback;
 
+import net.fretux.knockedback.config.Config;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
@@ -10,7 +11,6 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
-import net.fretux.knockedback.config.Config;
 
 import java.util.*;
 
@@ -18,8 +18,18 @@ import java.util.*;
 public class KnockedManager {
     private static final Map<UUID, Integer> knockedEntities = new HashMap<>();
     private static final Set<UUID> grippedEntities = new HashSet<>();
+    private static final Set<UUID> killingNow = new HashSet<>();
 
-    private static int getKnockedDuration() {
+    public static void markKillInProgress(LivingEntity e) {
+        killingNow.add(e.getUUID());
+    }
+
+    public static void unmarkKillInProgress(LivingEntity e) {
+        killingNow.remove(e.getUUID());
+    }
+
+
+    public static int getKnockedDuration() {
         return Config.COMMON.knockedDuration.get();
     }
 
@@ -40,7 +50,7 @@ public class KnockedManager {
             boolean grounded = sp.onGround() || sp.isInWater();
             sp.setNoGravity(false);
             if (!grounded) {
-                sp.setDeltaMovement(0, sp.getDeltaMovement().y() - 0.08, 0);
+                sp.setDeltaMovement(0, sp.getDeltaMovement().y() - 0.08, 0); 
             }
         }
 
@@ -130,44 +140,56 @@ public class KnockedManager {
     }
 
     private static void killAndRemove(LivingEntity entity) {
-        removeKnockedState(entity);
-        entity.kill();
+        removeKnockedState(entity); 
+        entity.setHealth(0.0F);
+        PlayerExecutionHandler.cancelExecution(entity.getUUID());
     }
-
+    
     @SubscribeEvent
     public static void onLivingHurt(LivingHurtEvent event) {
         LivingEntity entity = event.getEntity();
-        if (!(entity instanceof Player player)) return;
         DamageSource src = event.getSource();
+        if (!(entity instanceof Player player)) return;
+        if (killingNow.contains(player.getUUID())) return;
+        if (MobKillHandler.isBeingMobExecuted(player.getUUID())
+                || PlayerExecutionHandler.isBeingPlayerExecuted(player.getUUID())) {
+            if (event.getSource().getEntity() instanceof LivingEntity) {
+                event.setCanceled(true);
+            }
+            return;
+        }
         String damageType = src.getMsgId();
         boolean isFatal = player.getHealth() - event.getAmount() <= 0;
-        if (isFatal && Config.COMMON.explosionsBypassKnockdown.get() &&
-                (damageType.contains("explosion") || damageType.contains("fireworks"))) {
-            killAndRemove(player);
-            return;
-        }
-        if (isFatal && Config.COMMON.fallDamageBypassesKnockdown.get() && damageType.contains("fall")) {
-            killAndRemove(player);
-            return;
-        }
-        if (isFatal && Config.COMMON.lavaBypassesKnockdown.get() &&
-                (damageType.contains("lava") || damageType.contains("inFire") ||
-                        damageType.contains("fire") || damageType.contains("onFire") ||
-                        damageType.contains("fireball") || damageType.contains("hotFloor"))) {
-            killAndRemove(player);
-            return;
+        if (isFatal) {
+            if (Config.COMMON.explosionsBypassKnockdown.get() &&
+                    (damageType.contains("explosion") || damageType.contains("fireworks"))) {
+                killAndRemove(player);
+                return;
+            }
+            if (Config.COMMON.fallDamageBypassesKnockdown.get() && damageType.contains("fall")) {
+                killAndRemove(player);
+                return;
+            }
+            if (Config.COMMON.lavaBypassesKnockdown.get() &&
+                    (damageType.contains("lava") || damageType.contains("inFire") ||
+                            damageType.contains("fire") || damageType.contains("onFire") ||
+                            damageType.contains("fireball") || damageType.contains("hotFloor"))) {
+                killAndRemove(player);
+                return;
+            }
         }
         boolean hasTotem = player.getMainHandItem().is(Items.TOTEM_OF_UNDYING)
                 || player.getOffhandItem().is(Items.TOTEM_OF_UNDYING);
-        if (isFatal && !isKnocked(entity)) {
-            if (!hasTotem || !Config.COMMON.totemPreventsKnockdown.get()) {
-                event.setCanceled(true);
-                applyKnockedState(entity);
+        if (!isKnocked(player)) {
+            if (isFatal) {
+                if (!hasTotem || !Config.COMMON.totemPreventsKnockdown.get()) {
+                    event.setCanceled(true);
+                    applyKnockedState(player);
+                }
             }
+            return;
         }
-        if (isKnocked(entity)) {
-            knockedEntities.put(entity.getUUID(), getKnockedDuration());
-            event.setCanceled(true);
-        }
+        knockedEntities.put(player.getUUID(), getKnockedDuration());
+        event.setCanceled(true);
     }
 }

@@ -14,16 +14,18 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Mod.EventBusSubscriber(modid = "knockedback", bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class PlayerExecutionHandler {
     public static final double EXECUTION_RANGE = 2.0;
+
+    private static final Set<UUID> killingNow = new HashSet<>();
+
     public static int getExecutionTime() {
         return Config.COMMON.executionTime.get();
     }
+
     public static boolean isBeingPlayerExecuted(UUID knockedId) {
         return executionAttempts.containsKey(knockedId);
     }
@@ -60,7 +62,7 @@ public class PlayerExecutionHandler {
     }
 
     public static void register() {
-         MinecraftForge.EVENT_BUS.register(new PlayerExecutionHandler());
+        MinecraftForge.EVENT_BUS.register(new PlayerExecutionHandler());
     }
 
     public static void startExecution(ServerPlayer executor, Player target) {
@@ -121,7 +123,9 @@ public class PlayerExecutionHandler {
         UUID id = knockedPlayer.getUUID();
         KnockedManager.removeKnockedState(knockedPlayer);
         cancelExecution(id);
+        KnockedManager.markKillInProgress(knockedPlayer);
         knockedPlayer.kill();
+        KnockedManager.unmarkKillInProgress(knockedPlayer);
         NetworkHandler.CHANNEL.send(
                 PacketDistributor.PLAYER.with(() -> executor),
                 new ExecutionProgressPacket(0)

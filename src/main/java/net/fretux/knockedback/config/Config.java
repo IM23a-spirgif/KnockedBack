@@ -19,7 +19,6 @@ public class Config {
         public final ForgeConfigSpec.BooleanValue explosionsBypassKnockdown;
         public final ForgeConfigSpec.BooleanValue fallDamageBypassesKnockdown;
         public final ForgeConfigSpec.BooleanValue lavaBypassesKnockdown;
-        public final ForgeConfigSpec.BooleanValue mobsCanExecute;
 
         public Common(ForgeConfigSpec.Builder builder) {
             builder.push("general");
@@ -49,12 +48,6 @@ public class Config {
             lavaBypassesKnockdown = builder
                     .comment("If true, lava or fire damage kills instead of knocking down. Default: true.")
                     .define("lavaBypassesKnockdown", true);
-
-            builder.pop().push("mobs");
-
-            mobsCanExecute = builder
-                    .comment("If true, hostile and aggressive neutral mobs can execute knocked players. Default: true.")
-                    .define("mobsCanExecute", true);
 
             builder.pop();
         }

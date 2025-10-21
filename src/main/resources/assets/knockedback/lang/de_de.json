@@ -16,8 +16,7 @@
   "message.knockedback.been_dropped":      "Du wurdest von %1$s abgesetzt",
   "message.knockedback.you_executed":      "Du hast %1$s hingerichtet!",
   "message.knockedback.you_were_executed": "Du wurdest von %1$s hingerichtet!",
-
-
-  "overlay.knockedback.recovery_time": "Zeit bis Erholung: %s s"
+  "overlay.knockedback.recovery_time": "Zeit bis Erholung: %s s",
+  "death.attack.knockedback_execution": "%1$s wurde gnadenlos hingerichtet!"
 }
 

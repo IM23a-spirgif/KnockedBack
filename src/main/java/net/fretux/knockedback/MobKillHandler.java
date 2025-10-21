@@ -1,5 +1,6 @@
 package net.fretux.knockedback;
 
+import net.fretux.knockedback.config.Config;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
@@ -11,7 +12,6 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
-import net.fretux.knockedback.config.Config;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -24,7 +24,6 @@ public class MobKillHandler {
     public static int getExecutionTime() {
         return Config.COMMON.executionTime.get();
     }
-
     private static final Map<UUID, KillAttempt> killAttempts = new HashMap<>();
 
     private static class KillAttempt {
@@ -49,7 +48,6 @@ public class MobKillHandler {
 
     @SubscribeEvent
     public void onMobHurt(LivingHurtEvent event) {
-        if (!Config.COMMON.mobsCanExecute.get()) return;
         LivingEntity entity = event.getEntity();
         if (!(entity instanceof Mob mob)) return;
         UUID mobUuid = mob.getUUID();
@@ -79,10 +77,6 @@ public class MobKillHandler {
 
     private void tickKillAttempts() {
         var server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
-        if (!net.fretux.knockedback.config.Config.COMMON.mobsCanExecute.get()) {
-            killAttempts.clear();
-            return;
-        }
         Map<UUID, KillAttempt> updated = new HashMap<>();
         for (UUID knockedId : KnockedManager.getKnockedUuids()) {
             Player knocked = getPlayerByUuid(knockedId);
@@ -123,6 +117,9 @@ public class MobKillHandler {
                 if (attempt.timeLeft <= 0) {
                     executeKnockedPlayer(knocked, mob);
                     continue;
+                } else {
+                    mob.getNavigation().stop();
+                    mob.setTarget(null);
                 }
             }
             updated.put(knockedId, attempt);
@@ -133,8 +130,11 @@ public class MobKillHandler {
 
     private void executeKnockedPlayer(Player knocked, Mob mob) {
         removeKnockedState(knocked);
-        knocked.kill();
+        mob.setTarget(null);
         mob.getNavigation().stop();
+        KnockedManager.markKillInProgress(knocked); 
+        knocked.kill();
+        KnockedManager.unmarkKillInProgress(knocked);
         if (knocked instanceof ServerPlayer sp) {
             NetworkHandler.CHANNEL.send(
                     PacketDistributor.PLAYER.with(() -> sp),
@@ -142,6 +142,7 @@ public class MobKillHandler {
             );
         }
     }
+
 
     @Nullable
     private Mob getMobInRange(Player p) {

@@ -14,5 +14,6 @@
   "message.knockedback.execution_interrupted_executor": "Your execution was interrupted!",
   "message.knockedback.you_executed": "You executed %s!",
   "message.knockedback.you_were_executed": "You were executed by %s!",
-  "overlay.knockedback.recovery_time": "Time until recovery: %s s"
+  "overlay.knockedback.recovery_time": "Time until recovery: %s s",
+  "death.attack.knockedback_execution": "%1$s was executed mercilessly."
 }
