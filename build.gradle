@@ -73,7 +73,9 @@ minecraft {
             // You can set various levels here.
             // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
             property 'forge.logging.console.level', 'debug'
-
+            def combinedOutput = files(sourceSets.main.output.classesDirs, sourceSets.main.output.resourcesDir)
+            environment 'MOD_CLASSES', combinedOutput.asPath
+            environment 'MOD_RESOURCES', sourceSets.main.output.resourcesDir
             mods {
                 "${mod_id}" {
                     source sourceSets.main
